@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { useNavigate } from "react-router-dom";
-import { rankTotals, type DerivedPlayer } from "@scheisse/shared";
+import { rankTotals, type DerivedPlayer } from "@gamenight/shared";
 import { Button, EmptyState, ButtonLink, PageHeader, SkewRow, cx } from "../../ui";
 import { haptic } from "./haptics";
 import { flushSync } from "./sync";
@@ -14,9 +14,9 @@ interface Ranked {
   rank: number;
 }
 
-/** Final order: by points descending, ties keep seat order and share the rank. */
-function finalRanking(players: DerivedPlayer[]): Ranked[] {
-  const ranks = rankTotals(players.map((p) => p.total));
+/** Final order: by points (rules decide whether highest or lowest wins), ties keep seat order and share the rank. */
+function finalRanking(players: readonly DerivedPlayer[], winner: "highest" | "lowest"): Ranked[] {
+  const ranks = rankTotals(players.map((p) => p.total), winner);
   return players
     .map((player, i) => ({ player, rank: ranks[i] ?? 1, seat: i }))
     .sort((a, b) => a.rank - b.rank || a.seat - b.seat);
@@ -57,7 +57,7 @@ export function CeremonyPage() {
   const run = useRunningMatch();
   const navigate = useNavigate();
   const reduce = useReducedMotion();
-  const ranking = useMemo(() => (run ? finalRanking(run.match.players) : []), [run]);
+  const ranking = useMemo(() => (run ? finalRanking(run.match.players, run.state.rules.winner) : []), [run]);
   if (!run) return <NoMatch title="Siegerehrung" />;
 
   if (!run.match.finished) {

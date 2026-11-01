@@ -1,6 +1,6 @@
-# Scheisse
+# Gamenight
 
-Punktezähler für das Stich-Ansage-Kartenspiel „Scheisse“: Spiel am Handy führen, live zuschauen, Bestenliste und Statistiken. Eigenes Backend (Express + PostgreSQL), keine externen Dienste.
+Punktezähler für Spieleabende – aktuell Scheisse, Wizard und Kniffel, mit konfigurierbaren Regelwerken (siehe `docs/spec-games.md`): Spiel am Handy führen, live zuschauen, Bestenliste und Statistiken. Eigenes Backend (Express + PostgreSQL), keine externen Dienste.
 
 ## Schnellstart
 
@@ -33,7 +33,7 @@ npm run build
 
 ## Aufbau
 
-- `packages/shared` – Typen, API-Vertrag (zod), Spiel-Engine, Statistik-Formeln
+- `packages/shared` – Spiele & Regelwerke, Spieltyp-Engines (Stichansage, Punkteblock), API-Vertrag (zod), Statistik-Formeln
 - `apps/server` – Express, Drizzle/Postgres, Auth (Benutzername + Passwort, JWT-Cookie), Matches mit Write-Token, SSE-Livestreams, Statistik
 - `apps/web` – Vite + React, Zustand, React Query
 - `docs/` – Specs und Architektur
@@ -41,8 +41,8 @@ npm run build
 ## Produktion mit Docker
 
 Images liegen in EINEM Docker-Hub-Repo (Free-Plan = 1 privates Repo), unterschieden per Tag-Praefix:
-`olafimus/olivers-master-repo:scheisse-server-<TAG>` und `...:scheisse-web-<TAG>`. Mit `IMAGE_REPO` ueberschreibbar
-(z.B. `IMAGE_REPO=192.168.1.10:5000/scheisse` fuer die LAN-Registry, siehe `docker/registry/README.md`).
+`olafimus/olivers-master-repo:gamenight-server-<TAG>` und `...:gamenight-web-<TAG>`. Mit `IMAGE_REPO` ueberschreibbar
+(z.B. `IMAGE_REPO=192.168.1.10:5000/gamenight` fuer die LAN-Registry, siehe `docker/registry/README.md`).
 
 ```bash
 # Bauen (lokal), optional mit Push; --multiarch = amd64+arm64 (Push noetig), z.B. fuer Raspberry Pi/NAS
@@ -64,6 +64,6 @@ docker compose -f docker-compose.prod.yml exec -T db psql -U scheisse scheisse <
 ```
 
 Registry-Optionen:
-- Docker Hub: `docker login`, dann `scripts/docker-build.sh --tag X --push` bzw. manuell `docker push olafimus/olivers-master-repo:scheisse-web-X`.
+- Docker Hub: `docker login`, dann `scripts/docker-build.sh --tag X --push` bzw. manuell `docker push olafimus/olivers-master-repo:gamenight-web-X`.
   Das Repo auf Docker Hub als privat anlegen; der Zielserver braucht dann ebenfalls `docker login` zum `pull`.
-- LAN-Registry: `docker compose -f docker/registry/docker-compose.yml up -d`, auf allen Clients `insecure-registries` setzen (oder TLS), `IMAGE_REPO=<ip>:5000/scheisse`.
+- LAN-Registry: `docker compose -f docker/registry/docker-compose.yml up -d`, auf allen Clients `insecure-registries` setzen (oder TLS), `IMAGE_REPO=<ip>:5000/gamenight`.

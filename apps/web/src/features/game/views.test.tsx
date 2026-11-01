@@ -1,8 +1,9 @@
+import type { TrickMatchState } from "@gamenight/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { deriveMatch } from "@scheisse/shared";
+import { deriveMatch } from "@gamenight/shared";
 import { ToastProvider } from "../../ui";
 import { PlayPage } from "./PlayPage";
 import { useGameStore, type GameView } from "./store";
@@ -22,6 +23,8 @@ const wrap = (ui: React.ReactNode) =>
   );
 
 const s = () => useGameStore.getState();
+/** Running state as trick-bidding match (these tests play Scheisse). */
+const t = () => s().state as TrickMatchState;
 
 function begin(names = ["Anna", "Ben", "Cleo"]) {
   for (const n of names) s().addDraftPlayer({ name: n, userId: null });
@@ -31,7 +34,7 @@ function begin(names = ["Anna", "Ben", "Cleo"]) {
 beforeEach(() => {
   window.localStorage.clear();
   s().endGame();
-  useGameStore.setState({ setupDraft: { players: [], deckSize: 32, maxCards: null }, view: null });
+  useGameStore.setState({ setupDraft: { players: [], gameId: "scheisse", rulesetId: "scheisse.standard", deckSize: 32, maxCards: null, repeatPeak: false, firstBidder: "giver" }, view: null });
 });
 
 describe("view switching", () => {
@@ -80,7 +83,7 @@ describe("view switching", () => {
     wrap(<PlayPage />);
     fireEvent.click(screen.getByRole("button", { name: "Anna: richtig" }));
     expect(vibrate).toHaveBeenCalledWith(10);
-    expect(s().state!.current.correct[s().state!.setup.players[0]!.id]).toBe(true);
+    expect(t().current.correct[t().setup.players[0]!.id]).toBe(true);
     Reflect.deleteProperty(navigator, "vibrate");
   });
 });
@@ -88,10 +91,10 @@ describe("view switching", () => {
 describe("wizard", () => {
   it("bids start with the giver and wrap", () => {
     begin(["Anna", "Ben", "Cleo", "Dora"]);
-    const m = deriveMatch(s().state!);
+    const m = deriveMatch(t());
     expect(biddingOrder(m.players, m.giverId).map((p) => p.name)).toEqual(["Anna", "Ben", "Cleo", "Dora"]);
     s().setGiver(m.players[2]!.id);
-    const m2 = deriveMatch(s().state!);
+    const m2 = deriveMatch(t());
     expect(biddingOrder(m2.players, m2.giverId).map((p) => p.name)).toEqual(["Cleo", "Dora", "Anna", "Ben"]);
   });
 
@@ -112,15 +115,15 @@ describe("wizard", () => {
     // result phase
     fireEvent.click(screen.getByRole("button", { name: "alle ✓" }));
     fireEvent.click(screen.getByRole("button", { name: "Anna: falsch" }));
-    expect(s().state!.rounds).toHaveLength(0);
+    expect(t().rounds).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Zusammenfassung ›" }));
     // summary with per-player deltas, nothing committed yet
     const list = screen.getByRole("list", { name: "Zusammenfassung" });
     const deltas = within(list).getAllByText(/^[+−]\d+$/).map((e) => e.textContent);
     expect(deltas).toEqual(["−10", "+10", "+11"]); // Anna, Ben, Cleo
-    expect(s().state!.rounds).toHaveLength(0);
+    expect(t().rounds).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Runde speichern" }));
-    expect(s().state!.rounds).toHaveLength(1);
+    expect(t().rounds).toHaveLength(1);
     // back to phase 1 of the next round, first bidder = the new giver (Ben)
     expect(screen.getByRole("heading", { name: /Ansage von\s*Ben/ })).toBeInTheDocument();
     // undo stays available

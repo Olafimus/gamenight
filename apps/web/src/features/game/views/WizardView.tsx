@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { useNavigate } from "react-router-dom";
-import { canUndoRound, rankTotals, roundPoints, type DerivedPlayer } from "@scheisse/shared";
-import { cx } from "../../../ui";
+import { canUndoRound, rankTotals, roundPoints, type TrickDerivedPlayer as DerivedPlayer } from "@gamenight/shared";
+import { Scoreboard } from "../../../components/Scoreboard";
+import { useMediaQuery } from "../../../lib/useMediaQuery";
+import { Segmented, cx } from "../../../ui";
 import { AnimatedNumber } from "./AnimatedNumber";
-import { MarkToggle } from "./controls";
+import { ResultControl, currentHit } from "./controls";
 import { RankBadge } from "./RankBadge";
 import type { ViewProps } from "./types";
 import styles from "./WizardView.module.css";
@@ -17,11 +19,11 @@ const PHASES: Array<{ id: Phase; label: string }> = [
   { id: "summary", label: "Zusammenfassung" },
 ];
 
-/** Players in bidding order: the giver bids first, then the following seats, wrapping around. */
-export function biddingOrder(players: DerivedPlayer[], giverId: string): DerivedPlayer[] {
+/** Players in bidding order: the first bidder (giver or the seat after, see rules), then the following seats, wrapping around. */
+export function biddingOrder(players: DerivedPlayer[], bidderId: string): DerivedPlayer[] {
   const g = Math.max(
     0,
-    players.findIndex((p) => p.id === giverId),
+    players.findIndex((p) => p.id === bidderId),
   );
   return [...players.slice(g), ...players.slice(0, g)];
 }
@@ -53,17 +55,111 @@ function Slide({ children, dir }: { children: ReactNode; dir: number }) {
   );
 }
 
-/** Resets (via key) after every committed / undone round so a new round always starts at phase 1. */
+/** Tablet and wider: the round table sits next to the assistant. */
+export const WIZARD_SIDE_QUERY = "(min-width: 768px)";
+
+/**
+ * The assistant resets (via key) after every committed / undone round so a new round always starts at phase 1.
+ * On wider screens a table of the round (current bidder highlighted) is shown beside it.
+ */
 export function WizardView(props: ViewProps) {
-  return <Wizard key={props.match.roundsPlayed} {...props} />;
+  const wide = useMediaQuery(WIZARD_SIDE_QUERY);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const wizard = <Wizard key={props.match.roundsPlayed} {...props} onActive={setActiveId} />;
+  if (!wide) return wizard;
+  return (
+    <div className={styles.layout}>
+      {wizard}
+      <WizardSide {...props} activeId={activeId} />
+    </div>
+  );
 }
 
-function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
+type Side = "table" | "board";
+
+/** Round table in bidding order: bid, result and total per player; the player bidding now is highlighted. */
+function WizardSide({ state, match, activeId }: ViewProps & { activeId: string | null }) {
+  const [panel, setPanel] = useState<Side>("table");
+  const order = biddingOrder(match.players, match.bidderId);
+  const tricksMode = state.rules.entry === "tricks";
+  const resultOf = (id: string) => {
+    if (tricksMode) {
+      const t = state.current.tricks?.[id];
+      return t === undefined ? "" : String(t);
+    }
+    const c = state.current.correct[id];
+    return c === undefined ? "" : c ? "✓" : "✗";
+  };
+  return (
+    <aside className={styles.side} aria-label="Tabelle">
+      <Segmented
+        ariaLabel="Anzeige"
+        full
+        value={panel}
+        onChange={setPanel}
+        options={[
+          { value: "table", label: "Runde" },
+          { value: "board", label: "Scoreboard" },
+        ]}
+      />
+      {panel === "table" ? (
+        <table className={styles.sideTable}>
+          <thead>
+            <tr>
+              <th scope="col">Platz</th>
+              <th scope="col">Name</th>
+              <th scope="col" className={styles.sideNum}>Ansage</th>
+              <th scope="col" className={styles.sideNum}>{tricksMode ? "Stiche" : "Erg."}</th>
+              <th scope="col" className={styles.sideNum}>Punkte</th>
+            </tr>
+          </thead>
+          <tbody>
+            {order.map((p) => {
+              const bid = state.current.bids[p.id];
+              const active = p.id === activeId;
+              return (
+                <tr key={p.id} className={cx(active && styles.sideActive)} aria-current={active ? "true" : undefined}>
+                  <td>{p.placement ?? "–"}</td>
+                  <td className={styles.sideName}>
+                    {p.name}
+                    {p.id === match.giverId && (
+                      <span className={styles.sideGiver} title="Geber">
+                        G
+                      </span>
+                    )}
+                  </td>
+                  <td className={styles.sideNum}>{bid ?? "–"}</td>
+                  <td className={styles.sideNum}>{resultOf(p.id)}</td>
+                  <td className={styles.sideNum}>
+                    <strong>{p.total}</strong>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={2}>Summe Ansagen</td>
+              <td className={cx(styles.sideNum, match.sumMatchesCards ? styles.sumEq : styles.sideSumBad)}>
+                {match.calledSum}/{match.cardsThisRound}
+              </td>
+              <td colSpan={2} />
+            </tr>
+          </tfoot>
+        </table>
+      ) : (
+        <Scoreboard match={match} />
+      )}
+    </aside>
+  );
+}
+
+function Wizard({ state, match, players: _sorted, actions, onActive }: ViewProps & { onActive: (id: string | null) => void }) {
   const navigate = useNavigate();
-  const order = useMemo(() => biddingOrder(match.players, match.giverId), [match.players, match.giverId]);
+  const order = useMemo(() => biddingOrder(match.players, match.bidderId), [match.players, match.bidderId]);
   const n = order.length;
   const hasBid = (id: string) => state.current.bids[id] !== undefined;
-  const anyMarked = order.some((p) => state.current.correct[p.id] !== undefined);
+  const anyMarked = order.some((p) => currentHit(state, p.id) !== undefined);
 
   const [phase, setPhase] = useState<Phase>(() =>
     match.allMarked ? "summary" : anyMarked || order.every((p) => hasBid(p.id)) ? "result" : "bid",
@@ -78,6 +174,9 @@ function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
   const reveal = useDelayedFlag(phase === "result" && match.allMarked, reduce ? 0 : 350);
   // Summary phase: start in the old order, then move the lines to their new placement.
   const resort = useDelayedFlag(phase === "summary", reduce ? 0 : 500);
+
+  const activeId = !match.finished && phase === "bid" ? ((order[idx] ?? order[0])?.id ?? null) : null;
+  useEffect(() => onActive(activeId), [activeId, onActive]);
 
   if (match.finished) {
     return (
@@ -101,6 +200,8 @@ function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
   }
 
   const cards = match.cardsThisRound;
+  const tricksMode = state.rules.entry === "tricks";
+  const enforced = state.rules.bidding.sumRule === "notEqualCards";
   const current = order[idx] ?? order[0]!;
   const isLast = idx === n - 1;
   const bidOf = (id: string) => state.current.bids[id] ?? 0;
@@ -117,11 +218,12 @@ function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
   };
 
   const projected = order.map((p) => {
-    const ok = state.current.correct[p.id] === true;
-    const delta = roundPoints(bidOf(p.id), ok);
+    const ok = currentHit(state, p.id) === true;
+    const tricks = state.rules.entry === "tricks" ? (state.current.tricks?.[p.id] ?? 0) : null;
+    const delta = roundPoints(bidOf(p.id), ok, state.rules.scoring, tricks);
     return { p, ok, delta, total: p.total + delta };
   });
-  const places = rankTotals(projected.map((x) => x.total));
+  const places = rankTotals(projected.map((x) => x.total), state.rules.winner);
   const projectedOf = new Map(projected.map((x, i) => [x.p.id, { ...x, place: places[i]! }]));
   const byOld = [...projected].sort((a, b) => (a.p.placement ?? 0) - (b.p.placement ?? 0));
   const summaryLines = resort ? [...byOld].sort((a, b) => projectedOf.get(a.p.id)!.place - projectedOf.get(b.p.id)!.place) : byOld;
@@ -161,6 +263,7 @@ function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
             <h2 className={styles.who}>
               Ansage von <span>{current.name}</span>
               {current.id === match.giverId && <em className={styles.dealer}>Geber</em>}
+              {idx === 0 && current.id !== match.giverId && <em className={styles.dealer}>Erste Ansage</em>}
             </h2>
             <p className={styles.standing}>
               <RankBadge placement={current.placement} />
@@ -171,7 +274,7 @@ function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
             </p>
             {hint !== null && (
               <p className={styles.hint} role="note">
-                Letzter Ansager: Mit {hint} wäre die Summe gleich den Karten.
+                Letzter Ansager: {enforced ? `${hint} ist nicht erlaubt (die Summe darf nicht aufgehen).` : `Mit ${hint} wäre die Summe gleich den Karten.`}
               </p>
             )}
 
@@ -181,6 +284,7 @@ function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
                   key={v}
                   type="button"
                   className={cx(styles.key, hasBid(current.id) && bidOf(current.id) === v && styles.keyOn, hint === v && styles.keyWarn)}
+                  disabled={enforced && hint === v}
                   aria-pressed={hasBid(current.id) && bidOf(current.id) === v}
                   aria-label={`${v} ansagen`}
                   onClick={() => pick(v)}
@@ -208,12 +312,20 @@ function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
         <Slide key="result" dir={1}>
           <div className={styles.body}>
             <div className={styles.bulk}>
-              <button type="button" className={cx(styles.btn, styles.bad)} onClick={() => actions.setAll(false)}>
-                alle ✗
-              </button>
-              <button type="button" className={cx(styles.btn, styles.good)} onClick={() => actions.setAll(true)}>
-                alle ✓
-              </button>
+              {tricksMode ? (
+                <button type="button" className={cx(styles.btn, styles.good)} onClick={() => actions.setAll(true)}>
+                  alle wie angesagt
+                </button>
+              ) : (
+                <>
+                  <button type="button" className={cx(styles.btn, styles.bad)} onClick={() => actions.setAll(false)}>
+                    alle ✗
+                  </button>
+                  <button type="button" className={cx(styles.btn, styles.good)} onClick={() => actions.setAll(true)}>
+                    alle ✓
+                  </button>
+                </>
+              )}
             </div>
             <ul className={styles.list} aria-label="Ergebnis">
               {order.map((p) => {
@@ -245,7 +357,7 @@ function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
                   <span className={styles.lbid}>
                     sagt <strong>{bidOf(p.id)}</strong>
                   </span>
-                  <MarkToggle big name={p.name} value={state.current.correct[p.id]} onChange={(v) => actions.setCorrect(p.id, v)} />
+                  <ResultControl big state={state} player={p} max={cards} actions={actions} />
                 </li>
                 );
               })}
@@ -278,7 +390,7 @@ function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
                     <span className={styles.lname}>{p.name}</span>
                   </span>
                   <span className={styles.lbid}>
-                    {bidOf(p.id)} {ok ? "✓" : "✗"}
+                    {bidOf(p.id)} {ok ? "✓" : tricksMode ? `✗ (${state.current.tricks?.[p.id] ?? 0})` : "✗"}
                   </span>
                   <strong className={cx(styles.delta, delta >= 0 ? styles.up : styles.down)} data-testid={`delta-${p.id}`}>
                     {delta >= 0 ? "+" : "−"}

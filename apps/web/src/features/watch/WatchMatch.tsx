@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { deriveMatch, type MatchDto } from "@scheisse/shared";
+import { deriveMatch, getGame, isTrickMatch, type MatchDto, type MatchDtoOf, type TrickMatchState } from "@gamenight/shared";
 import { ApiRequestError, apiGet, errorMessage } from "../../lib/api";
 import { useEventSource } from "../../lib/useEventSource";
 import { useMediaQuery } from "../../lib/useMediaQuery";
@@ -11,6 +11,7 @@ import { Scoreboard } from "../../components/Scoreboard";
 import { buildWatchRows } from "./watchTable";
 import { LiveRoundCard } from "./LiveRoundCard";
 import { ProgressChart } from "../game/views/ProgressChart";
+import { SheetBoard } from "../game/sheet/SheetBoard";
 import styles from "./Watch.module.css";
 
 type View = "table" | "chart" | "scoreboard";
@@ -73,7 +74,9 @@ export function WatchMatch() {
     queryFn: ({ signal }) => apiGet<MatchDto>(`/matches/${encodeURIComponent(code)}`, { signal }),
     retry: (n, err) => !(err instanceof ApiRequestError && err.status === 404) && n < 2,
   });
-  const match = query.data;
+  const raw = query.data;
+  // Watching is only implemented for trick-bidding games so far.
+  const match = raw && isTrickMatch(raw.state) ? (raw as MatchDtoOf<TrickMatchState>) : undefined;
 
   const onEvent = useCallback(
     (type: string, data: string) => {
@@ -119,6 +122,30 @@ export function WatchMatch() {
       </>
     );
 
+  if (raw && raw.state.kind === "score-sheet") {
+    const sheet = deriveMatch(raw.state);
+    const active = sheet.players.find((p) => p.id === sheet.activePlayerId);
+    return (
+      <>
+        {header}
+        <main className={cx(styles.page, styles.pageWide)}>
+          <div className={styles.head}>
+            <div>
+              <div className={styles.headTitle}>
+                {getGame(raw.state.gameId)?.name ?? raw.state.gameId} · {sheet.finished ? "Beendet" : `Runde ${sheet.roundNumber} von ${sheet.totalRounds}`}
+              </div>
+              <div className={styles.headSub}>{active ? `Am Zug: ${active.name}` : raw.state.ruleset.name}</div>
+            </div>
+            <span className={styles.headSub} role="status">
+              {status === "open" ? "Live" : status === "error" ? "Verbindung unterbrochen" : "Verbinde …"}
+            </span>
+          </div>
+          <SheetBoard state={raw.state} match={sheet} />
+        </main>
+      </>
+    );
+  }
+
   if (query.isError || !match || !derived) {
     const notFound = query.error instanceof ApiRequestError && query.error.status === 404;
     return (
@@ -154,8 +181,16 @@ export function WatchMatch() {
           <div>
             <div className={styles.headTitle}>
               Runde {derived.roundNumber} von {derived.totalRounds}
+              {!finished && (
+                <span className={styles.cards}>
+                  {derived.cardsThisRound} {derived.cardsThisRound === 1 ? "Karte" : "Karten"}
+                </span>
+              )}
             </div>
-            <div className={styles.headSub}>Geber: {derived.giverName}</div>
+            <div className={styles.headSub}>
+              Geber: {derived.giverName}
+              {derived.bidderId !== derived.giverId && <> · Erste Ansage: {derived.bidderName}</>}
+            </div>
           </div>
           {!finished && (
             <Tooltip content={liveTip} side="bottom">

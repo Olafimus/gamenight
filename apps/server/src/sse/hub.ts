@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { MatchDto, MatchSummaryDto } from "@scheisse/shared";
+import type { MatchDto, MatchSummaryDto } from "@gamenight/shared";
 
 export type LobbyStatus = "active" | "finished" | "all";
 

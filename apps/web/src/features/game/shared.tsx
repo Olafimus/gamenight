@@ -1,6 +1,14 @@
 import { useEffect, useMemo } from "react";
 import { Outlet } from "react-router-dom";
-import { deriveMatch, type DerivedMatch, type MatchState } from "@scheisse/shared";
+import {
+  deriveMatch,
+  type DerivedMatch,
+  type MatchState,
+  type SheetDerivedMatch,
+  type SheetMatchState,
+  type TrickDerivedMatch,
+  type TrickMatchState,
+} from "@gamenight/shared";
 import { ButtonLink, EmptyState, PageHeader } from "../../ui";
 import { useGameStore } from "./store";
 import { startSync } from "./sync";
@@ -22,6 +30,18 @@ export function useRunningMatch(): { state: MatchState; match: DerivedMatch } | 
   const state = useGameStore((s) => s.state);
   const match = useMemo(() => (state ? deriveMatch(state) : null), [state]);
   return state && match ? { state, match } : null;
+}
+
+/** Running trick-bidding match (null when none or another kind is running). */
+export function useRunningTrick(): { state: TrickMatchState; match: TrickDerivedMatch } | null {
+  const run = useRunningMatch();
+  return run && run.state.kind === "trick-bidding" ? (run as { state: TrickMatchState; match: TrickDerivedMatch }) : null;
+}
+
+/** Running score-sheet match (null when none or another kind is running). */
+export function useRunningSheet(): { state: SheetMatchState; match: SheetDerivedMatch } | null {
+  const run = useRunningMatch();
+  return run && run.state.kind === "score-sheet" ? (run as { state: SheetMatchState; match: SheetDerivedMatch }) : null;
 }
 
 /** Shown on /game/* sub pages when no match is running. */

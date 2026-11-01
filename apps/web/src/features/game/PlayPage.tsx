@@ -2,18 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { IoContract, IoEllipseOutline, IoFootsteps, IoExpand, IoGrid, IoMenu, IoReorderFour, IoTabletLandscapeOutline } from "react-icons/io5";
 import {
-  canCommitRound,
   canUndoRound,
-  type DerivedMatch,
-  type DerivedPlayer,
-} from "@scheisse/shared";
-import { CheckToggle, ConfirmDialog, Dropdown, IconButton, NumberInput, cx, useToast } from "../../ui";
+  getGame,
+  type TrickDerivedMatch as DerivedMatch,
+  type TrickDerivedPlayer as DerivedPlayer,
+} from "@gamenight/shared";
+import { ConfirmDialog, Dropdown, IconButton, NumberInput, cx, useToast } from "../../ui";
 import { SettingsModal } from "./SettingsModal";
 import { useGameStore, type GameView, type SortMode, type SyncStatus } from "./store";
-import { useRunningMatch } from "./shared";
-import { haptic } from "./haptics";
+import { useRunningTrick } from "./shared";
 import { wakeLockSupported } from "./useWakeLock";
-import { useRoundActions } from "./views/controls";
+import { ResultControl, useRoundActions } from "./views/controls";
 import { CompactView } from "./views/CompactView";
 import { SplitView } from "./views/SplitView";
 import { TableView } from "./views/TableView";
@@ -71,7 +70,7 @@ function SyncDot({ status }: { status: SyncStatus }) {
 }
 
 export function PlayPage() {
-  const run = useRunningMatch();
+  const run = useRunningTrick();
   const navigate = useNavigate();
   const toast = useToast();
   const sortMode = useGameStore((s) => s.sortMode);
@@ -94,13 +93,16 @@ export function PlayPage() {
   const report = (err: string | null) => err && toast.show(err, { tone: "error" });
 
   const sorted = sortPlayers(match.players, sortMode, match.giverId);
-  const canCommit = canCommitRound(state);
+  // Rule blockers (bid sum, tricks sum) are explained by a toast on commit, so only incomplete rounds disable the button.
+  const canCommit = match.allMarked;
+  const tricksMode = state.rules.entry === "tricks";
   const canUndo = canUndoRound(state);
 
   return (
     <div className={styles.page}>
       <GameHeader
         match={match}
+        sumLabel={tricksMode ? "Ansagen" : "Stiche"}
         sortMode={sortMode}
         view={view}
         availableViews={(Object.keys(VIEW_LABELS) as GameView[]).filter((v) => v !== "split" || width >= SPLIT_MIN_WIDTH)}
@@ -125,14 +127,11 @@ export function PlayPage() {
                 player={p}
                 isGiver={p.id === match.giverId}
                 bid={state.current.bids[p.id] ?? 0}
-                correct={state.current.correct[p.id]}
                 maxBid={match.cardsThisRound}
                 disabled={match.finished}
                 onBid={(v) => actions.setBid(p.id, v ?? 0)}
-                onCorrect={(v) => {
-                  haptic(10);
-                  actions.setCorrect(p.id, v);
-                }}
+                result={<ResultControl state={state} player={p} max={match.cardsThisRound} disabled={match.finished} actions={actions} />}
+                resultLabel={tricksMode ? "Stiche" : "Richtig?"}
               />
             ))}
           </div>
@@ -155,15 +154,23 @@ export function PlayPage() {
         ) : (
           <>
             <div className={styles.mid}>
-              <button type="button" className={cx(styles.pill, styles.no)} aria-label="Alle falsch" onClick={() => actions.setAll(false)}>
-                <span className={styles.long}>alle ✗</span><span className={styles.sym} aria-hidden="true">✗</span>
-              </button>
+              {!tricksMode && (
+                <button type="button" className={cx(styles.pill, styles.no)} aria-label="Alle falsch" onClick={() => actions.setAll(false)}>
+                  <span className={styles.long}>alle ✗</span><span className={styles.sym} aria-hidden="true">✗</span>
+                </button>
+              )}
               <button type="button" className={styles.pill} onClick={() => report(store.resetRound())}>
                 Reset
               </button>
-              <button type="button" className={cx(styles.pill, styles.yes)} aria-label="Alle richtig" onClick={() => actions.setAll(true)}>
-                <span className={styles.long}>alle ✓</span><span className={styles.sym} aria-hidden="true">✓</span>
-              </button>
+              {tricksMode ? (
+                <button type="button" className={cx(styles.pill, styles.yes)} aria-label="Alle wie angesagt" onClick={() => actions.setAll(true)}>
+                  <span className={styles.long}>alle =</span><span className={styles.sym} aria-hidden="true">=</span>
+                </button>
+              ) : (
+                <button type="button" className={cx(styles.pill, styles.yes)} aria-label="Alle richtig" onClick={() => actions.setAll(true)}>
+                  <span className={styles.long}>alle ✓</span><span className={styles.sym} aria-hidden="true">✓</span>
+                </button>
+              )}
             </div>
             <button
               type="button"
@@ -227,6 +234,7 @@ function useFullscreen() {
 
 function GameHeader({
   match,
+  sumLabel,
   sortMode,
   view,
   availableViews,
@@ -242,6 +250,7 @@ function GameHeader({
   onEnd,
 }: {
   match: DerivedMatch;
+  sumLabel: string;
   sortMode: SortMode;
   view: GameView;
   availableViews: GameView[];
@@ -285,15 +294,26 @@ function GameHeader({
       />
       <div className={styles.info}>
         <div className={styles.round}>
-          {match.finished ? "Spiel beendet" : `Runde ${match.roundNumber} von ${match.totalRounds}`}
+          {getGame(match.gameId)?.name ?? match.gameId} · {match.finished ? "Spiel beendet" : `Runde ${match.roundNumber} von ${match.totalRounds}`}
         </div>
         <div className={styles.sub}>
           <span>
             Geber: <strong>{match.giverName}</strong>
           </span>
+          {match.bidderId !== match.giverId && (
+            <span>
+              Ansage: <strong>{match.bidderName}</strong>
+            </span>
+          )}
           {!match.finished && (
             <span className={ok ? styles.sumOk : styles.sumBad} data-testid="stiche">
-              Stiche: {match.calledSum} / {match.cardsThisRound}
+              {sumLabel}: {match.calledSum} / {match.cardsThisRound}
+            </span>
+          )}
+          {!match.finished && !match.bidSumAllowed && <span className={styles.sumBad}>darf nicht aufgehen</span>}
+          {!match.finished && !match.tricksSumValid && (
+            <span className={styles.sumBad}>
+              Stiche gemacht: {match.tricksSum} / {match.cardsThisRound}
             </span>
           )}
         </div>
@@ -329,20 +349,20 @@ function PlayerCard({
   player,
   isGiver,
   bid,
-  correct,
   maxBid,
   disabled,
   onBid,
-  onCorrect,
+  result,
+  resultLabel,
 }: {
   player: DerivedPlayer;
   isGiver: boolean;
   bid: number;
-  correct: boolean | undefined;
   maxBid: number;
   disabled: boolean;
   onBid: (v: number | null) => void;
-  onCorrect: (v: boolean) => void;
+  result: JSX.Element;
+  resultLabel: string;
 }) {
   return (
     <article className={cx(styles.card, isGiver && styles.cardGiver)} data-testid={`player-${player.id}`}>
@@ -362,8 +382,8 @@ function PlayerCard({
           <NumberInput label={`Ansage von ${player.name}`} value={bid} min={0} max={maxBid} compact disabled={disabled} onChange={onBid} />
         </div>
         <div className={styles.field}>
-          <span className={styles.fieldLabel}>Richtig?</span>
-          <CheckToggle label={player.name} value={correct} compact disabled={disabled} onChange={onCorrect} />
+          <span className={styles.fieldLabel}>{resultLabel}</span>
+          {result}
         </div>
       </div>
     </article>

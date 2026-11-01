@@ -1,4 +1,4 @@
-import { cardsForRound, deriveMatch, type MatchState } from "@scheisse/shared";
+import { deriveMatch, firstBidderId, type TrickMatchState as MatchState } from "@gamenight/shared";
 
 export type RoundOutcome = "right" | "wrong" | "neutral";
 
@@ -64,7 +64,7 @@ export interface LiveRound {
   cards: number;
   giverName: string;
   calledSum: number;
-  /** players in bidding order (giver first) */
+  /** players in bidding order (first bidder first) */
   rows: LiveRoundRow[];
 }
 
@@ -74,7 +74,8 @@ export function liveRound(state: MatchState, phase: RoundPhase): LiveRound {
   const showLast = (phase === "closed" || phase === "finished") && d.roundsPlayed > 0;
   const idx = d.roundsPlayed - 1;
   const giverId = showLast ? state.rounds[idx]!.giverId : d.giverId;
-  const g = Math.max(0, d.players.findIndex((p) => p.id === giverId));
+  const bidderId = firstBidderId(state.rules, state.setup.players, giverId);
+  const g = Math.max(0, d.players.findIndex((p) => p.id === bidderId));
   const ordered = [...d.players.slice(g), ...d.players.slice(0, g)];
   const rows = ordered.map<LiveRoundRow>((p) =>
     showLast
@@ -83,8 +84,8 @@ export function liveRound(state: MatchState, phase: RoundPhase): LiveRound {
   );
   return {
     round: showLast ? d.roundsPlayed : d.roundNumber,
-    cards: showLast ? cardsForRound(d.roundsPlayed, d.peak) : d.cardsThisRound,
-    giverName: ordered[0]?.name ?? "",
+    cards: showLast ? (d.roundCards[d.roundsPlayed - 1] ?? 0) : d.cardsThisRound,
+    giverName: d.players.find((p) => p.id === giverId)?.name ?? "",
     calledSum: rows.reduce((s, r) => s + (r.bid ?? 0), 0),
     rows,
   };

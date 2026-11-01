@@ -3,11 +3,12 @@ import { Router } from "express";
 import {
   ELO_START,
   leaderboardQuerySchema,
+  profileQuerySchema,
   type LeaderboardResponse,
   type PlayerMatchDto,
   type PlayerProfileDto,
   userLabel,
-} from "@scheisse/shared";
+} from "@gamenight/shared";
 import type { Ctx } from "../app";
 import { users } from "../db/schema";
 import { asyncH, HttpError } from "../lib/http";
@@ -20,10 +21,11 @@ export function statsRouter({ db, stats }: Ctx): Router {
     "/leaderboard",
     asyncH(async (req, res) => {
       const q = leaderboardQuerySchema.parse(req.query);
-      const c = await stats.get();
+      const c = await stats.get(q.game);
       const { categories, entries } = stats.leaderboard(c, q.category, q.period);
       const term = q.search?.toLowerCase();
       const out: LeaderboardResponse = {
+        game: q.game,
         category: q.category,
         period: q.period,
         categories,
@@ -66,6 +68,7 @@ export function statsRouter({ db, stats }: Ctx): Router {
     }));
 
     return {
+      game: c.gameId,
       subject: { kind: s.kind, userId: s.userId, name: s.name },
       overall: { ...base, placements: metrics.placements },
       elo: s.rows.length ? stats.eloOf(c, s.key) : ELO_START,
@@ -83,7 +86,7 @@ export function statsRouter({ db, stats }: Ctx): Router {
       if (!/^[0-9a-f-]{36}$/i.test(userId)) throw new HttpError(404, "not_found", "Spieler nicht gefunden");
       const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
       if (!user) throw new HttpError(404, "not_found", "Spieler nicht gefunden");
-      const c = await stats.get();
+      const c = await stats.get(profileQuerySchema.parse(req.query).game);
       res.json(buildProfile(c, c.subjects.get(userId), { kind: "user", userId, name: userLabel(user) }));
     }),
   );
@@ -93,7 +96,7 @@ export function statsRouter({ db, stats }: Ctx): Router {
     asyncH(async (req, res) => {
       const raw = req.params.name!.trim();
       if (!raw) throw new HttpError(404, "not_found", "Spieler nicht gefunden");
-      const c = await stats.get();
+      const c = await stats.get(profileQuerySchema.parse(req.query).game);
       const s = c.subjects.get(guestKey(raw));
       if (!s || s.kind !== "guest") throw new HttpError(404, "not_found", "Gast nicht gefunden");
       res.json(buildProfile(c, s, { kind: "guest", userId: null, name: raw }));

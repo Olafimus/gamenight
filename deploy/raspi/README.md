@@ -1,4 +1,4 @@
-# Scheisse auf dem Raspberry Pi
+# Gamenight auf dem Raspberry Pi
 
 Voraussetzungen: Raspberry Pi 4/5 (mind. 2 GB RAM empfohlen) mit **Raspberry Pi OS 64-bit**, Docker + Compose-Plugin
 (`curl -fsSL https://get.docker.com | sh`, danach `sudo usermod -aG docker $USER` und neu einloggen).

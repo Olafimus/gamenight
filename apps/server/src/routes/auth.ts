@@ -6,11 +6,12 @@ import {
   changePasswordSchema,
   claimGuestSchema,
   credentialsSchema,
+  mapPlayers,
   registerSchema,
   updateProfileSchema,
   type ClaimGuestResponse,
   type UserDto,
-} from "@scheisse/shared";
+} from "@gamenight/shared";
 import type { Ctx } from "../app";
 import { matchPlayers, matchResults, matches, users } from "../db/schema";
 import { asyncH, HttpError, isUniqueViolation } from "../lib/http";
@@ -75,10 +76,7 @@ async function claimGuestSeats(tx: Tx, userId: string, lower: string): Promise<C
       .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.playerId, playerId)));
     const [m] = await tx.select({ state: matches.state }).from(matches).where(eq(matches.id, matchId)).for("update");
     if (m) {
-      const state = {
-        ...m.state,
-        setup: { ...m.state.setup, players: m.state.setup.players.map((p) => (p.id === playerId ? { ...p, userId } : p)) },
-      };
+      const state = mapPlayers(m.state, (p) => (p.id === playerId ? { ...p, userId } : p));
       await tx.update(matches).set({ state }).where(eq(matches.id, matchId));
     }
   }

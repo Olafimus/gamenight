@@ -8,8 +8,9 @@ import {
   setAllCorrect,
   setBid,
   type CreateMatchResponse,
-  type MatchState,
-} from "@scheisse/shared";
+  type MatchState as AnyMatchState,
+  type TrickMatchState as MatchState,
+} from "@gamenight/shared";
 import { createApp } from "../src/app";
 import { createDb } from "../src/db/client";
 import type { Hub } from "../src/sse/hub";
@@ -25,7 +26,7 @@ export function setupTestApp() {
     hub: hub as Hub,
     stats,
     async reset() {
-      await db.execute(sql`truncate table match_results, match_players, matches, users restart identity cascade`);
+      await db.execute(sql`truncate table match_results, match_players, matches, rulesets, users restart identity cascade`);
     },
     async close() {
       hub.close();
@@ -58,7 +59,7 @@ export function playRounds(state: MatchState, n = 1000): MatchState {
   return s;
 }
 
-export async function createMatch(app: Express, state: MatchState, agent?: ReturnType<typeof request.agent>): Promise<CreateMatchResponse> {
+export async function createMatch(app: Express, state: AnyMatchState, agent?: ReturnType<typeof request.agent>): Promise<CreateMatchResponse> {
   const r = await (agent ?? request(app)).post("/api/matches").send({ state });
   if (r.status !== 201) throw new Error(`create failed ${r.status} ${JSON.stringify(r.body)}`);
   return r.body as CreateMatchResponse;
@@ -69,4 +70,10 @@ export async function registerUser(app: Express, username: string) {
   const r = await agent.post("/api/auth/register").send({ username, password: "secret123" });
   if (r.status !== 201) throw new Error(`register failed ${r.status}`);
   return { agent, user: r.body as { id: string; username: string; createdAt: string } };
+}
+
+/** Narrows a MatchDto state to the trick-bidding kind (all API tests use Scheisse). */
+export function asTrick(state: AnyMatchState): MatchState {
+  if (state.kind !== "trick-bidding") throw new Error(`expected trick-bidding, got ${state.kind}`);
+  return state;
 }

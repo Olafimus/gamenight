@@ -33,3 +33,11 @@
   .seat { width: 1.3rem; height: 1.3rem; font-size: 0.7rem; }
   .name { font-size: 0.95rem; }
 }
+
+.ctrls { flex: none; display: flex; align-items: center; gap: 0.35rem; }
+/* tricks entry ("=" + stepper) needs more room: controls get their own line on phones */
+@media (max-width: 599px) {
+  .listTricks { grid-auto-rows: auto; }
+  .tricksRow { flex-wrap: wrap; padding-block: 0.35rem; row-gap: 0.3rem; }
+  .tricksRow .ctrls { flex-basis: 100%; justify-content: space-between; }
+}

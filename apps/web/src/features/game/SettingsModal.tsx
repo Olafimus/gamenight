@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { IoCopyOutline } from "react-icons/io5";
-import { DECK_SIZES, type DeckSize, type DerivedMatch, type MatchPlayer, type MatchState } from "@scheisse/shared";
+import { getGame, isTrickMatch, type DerivedMatch, type MatchPlayer, type MatchState } from "@gamenight/shared";
 import { Button, Dropdown, IconButton, Modal, Segmented, useToast } from "../../ui";
 import { SeatList } from "./SeatList";
 import { LinkAccountDialog } from "./LinkAccountDialog";
@@ -39,7 +39,7 @@ export function SettingsModal({ open, onClose, state, match }: Props) {
     }
   };
 
-  const setDeck = (deck: DeckSize) => {
+  const setDeck = (deck: number) => {
     const err = store.setDeck(deck);
     if (err) toast.show(`Deck nicht änderbar: ${err}`, { tone: "error" });
   };
@@ -50,7 +50,9 @@ export function SettingsModal({ open, onClose, state, match }: Props) {
     else toast.show("Sitzordnung gespeichert", { tone: "success" });
   };
 
-  const giver = stored.find((p) => p.id === match.giverId);
+  const trick = isTrickMatch(state) && match.kind === "trick-bidding" ? { state, match } : null;
+  const giverId = trick?.match.giverId;
+  const giver = stored.find((p) => p.id === giverId);
 
   return (
     <>
@@ -58,13 +60,21 @@ export function SettingsModal({ open, onClose, state, match }: Props) {
       <div className={styles.body}>
         <dl className={styles.info}>
           <div>
+            <dt>Spiel</dt>
+            <dd>
+              {getGame(state.gameId)?.name ?? state.gameId} · {state.ruleset.name}
+            </dd>
+          </div>
+          <div>
             <dt>Spieler</dt>
             <dd>{stored.length}</dd>
           </div>
-          <div>
-            <dt>Deck</dt>
-            <dd>{state.setup.deckSize}</dd>
-          </div>
+          {trick && (
+            <div>
+              <dt>Deck</dt>
+              <dd>{trick.state.setup.deckSize}</dd>
+            </div>
+          )}
           <div>
             <dt>Runden</dt>
             <dd>{match.totalRounds}</dd>
@@ -83,16 +93,19 @@ export function SettingsModal({ open, onClose, state, match }: Props) {
         </dl>
         {!code && <p className={styles.hint}>Der Code erscheint, sobald das Match mit dem Server synchronisiert ist.</p>}
 
-        <section className={styles.section}>
-          <h3>Kartendeck</h3>
-          <Segmented
-            ariaLabel="Deckgröße"
-            value={state.setup.deckSize}
-            onChange={setDeck}
-            options={DECK_SIZES.map((d) => ({ value: d, label: String(d) }))}
-          />
-        </section>
+        {trick && trick.state.rules.deck.sizes.length > 1 && (
+          <section className={styles.section}>
+            <h3>Kartendeck</h3>
+            <Segmented
+              ariaLabel="Deckgröße"
+              value={trick.state.setup.deckSize}
+              onChange={setDeck}
+              options={trick.state.rules.deck.sizes.map((d) => ({ value: d, label: String(d) }))}
+            />
+          </section>
+        )}
 
+        {trick && (
         <section className={styles.section}>
           <h3>Aktueller Geber</h3>
           <Dropdown
@@ -105,7 +118,7 @@ export function SettingsModal({ open, onClose, state, match }: Props) {
             items={stored.map((p) => ({
               key: p.id,
               label: p.name,
-              selected: p.id === match.giverId,
+              selected: p.id === giverId,
               onSelect: () => {
                 const err = store.setGiver(p.id);
                 if (err) toast.show(err, { tone: "error" });
@@ -113,10 +126,11 @@ export function SettingsModal({ open, onClose, state, match }: Props) {
             }))}
           />
         </section>
+        )}
 
         <section className={styles.section}>
           <h3>Sitzordnung</h3>
-          <SeatList players={order} markId={match.giverId} onLink={setLinking} onReorder={(ids) => setOrder(ids.map((id) => order.find((p) => p.id === id)!))} />
+          <SeatList players={order} markId={giverId} onLink={setLinking} onReorder={(ids) => setOrder(ids.map((id) => order.find((p) => p.id === id)!))} />
           {changed && (
             <div className={styles.row}>
               <Button variant="ghost" onClick={() => setOrder(stored)}>

@@ -5,11 +5,11 @@ COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
-RUN npm ci --workspace @scheisse/web --include-workspace-root
+RUN npm ci --workspace @gamenight/web --include-workspace-root
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY apps/web apps/web
-RUN npm run build -w @scheisse/web
+RUN npm run build -w @gamenight/web
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf

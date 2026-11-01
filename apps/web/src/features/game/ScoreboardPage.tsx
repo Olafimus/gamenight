@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { cardsForRound } from "@scheisse/shared";
 import { Scoreboard } from "../../components/Scoreboard";
 import { Button, CheckToggle, Modal, NumberInput, PageHeader, useToast } from "../../ui";
-import { NoMatch, useRunningMatch } from "./shared";
+import { NoMatch, useRunningTrick } from "./shared";
 import { useGameStore } from "./store";
 import styles from "./ScoreboardPage.module.css";
 
@@ -11,25 +10,31 @@ interface Editing {
   playerId: string;
   bid: number;
   correct: boolean;
+  tricks: number;
 }
 
-export function ScoreboardPage() {
-  const run = useRunningMatch();
+export function TrickScoreboardPage() {
+  const run = useRunningTrick();
   const toast = useToast();
   const [correcting, setCorrecting] = useState(false);
   const [editing, setEditing] = useState<Editing | null>(null);
   if (!run) return <NoMatch title="Scoreboard" />;
   const { match } = run;
+  const tricksMode = run.state.rules.entry === "tricks";
 
   const open = (round: number, playerId: string) => {
     const p = match.players.find((x) => x.id === playerId);
     if (!p) return;
-    setEditing({ round, playerId, bid: p.bids[round] ?? 0, correct: p.correct[round] ?? false });
+    setEditing({ round, playerId, bid: p.bids[round] ?? 0, correct: p.correct[round] ?? false, tricks: p.tricks[round] ?? 0 });
   };
 
   const save = () => {
     if (!editing) return;
-    const err = useGameStore.getState().correct(editing.round, editing.playerId, { bid: editing.bid, correct: editing.correct });
+    const err = useGameStore.getState().correct(
+      editing.round,
+      editing.playerId,
+      tricksMode ? { bid: editing.bid, tricks: editing.tricks } : { bid: editing.bid, correct: editing.correct },
+    );
     if (err) toast.show(err, { tone: "error" });
     else toast.show("Eintrag korrigiert", { tone: "success" });
     setEditing(null);
@@ -77,14 +82,28 @@ export function ScoreboardPage() {
                 label={`Ansage von ${editingPlayer.name} in Runde ${editing.round + 1}`}
                 value={editing.bid}
                 min={0}
-                max={cardsForRound(editing.round + 1, match.peak)}
+                max={match.roundCards[editing.round] ?? match.peak}
                 onChange={(v) => setEditing({ ...editing, bid: v ?? 0 })}
               />
             </div>
-            <div className={styles.field}>
-              <span>Richtig?</span>
-              <CheckToggle label={editingPlayer.name} value={editing.correct} onChange={(v) => setEditing({ ...editing, correct: v })} />
-            </div>
+            {tricksMode ? (
+              <div className={styles.field}>
+                <span>Stiche</span>
+                <NumberInput
+                  dark
+                  label={`Stiche von ${editingPlayer.name} in Runde ${editing.round + 1}`}
+                  value={editing.tricks}
+                  min={0}
+                  max={match.roundCards[editing.round] ?? match.peak}
+                  onChange={(v) => setEditing({ ...editing, tricks: v ?? 0 })}
+                />
+              </div>
+            ) : (
+              <div className={styles.field}>
+                <span>Richtig?</span>
+                <CheckToggle label={editingPlayer.name} value={editing.correct} onChange={(v) => setEditing({ ...editing, correct: v })} />
+              </div>
+            )}
           </div>
         )}
       </Modal>

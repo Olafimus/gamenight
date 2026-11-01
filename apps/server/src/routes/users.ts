@@ -1,7 +1,7 @@
 import { asc, desc, isNull, sql } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
-import { userLabel, type PlayerSearchResultDto } from "@scheisse/shared";
+import { userLabel, type PlayerSearchResultDto } from "@gamenight/shared";
 import type { Ctx } from "../app";
 import { matchPlayers, matches, users } from "../db/schema";
 import { asyncH, likeContains } from "../lib/http";

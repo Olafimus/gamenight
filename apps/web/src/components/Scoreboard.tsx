@@ -1,4 +1,4 @@
-import type { DerivedMatch } from "@scheisse/shared";
+import type { TrickDerivedMatch as DerivedMatch } from "@gamenight/shared";
 import styles from "./Scoreboard.module.css";
 import { cx } from "../ui/cx";
 import { Tooltip } from "../ui/Tooltip";
@@ -9,10 +9,6 @@ export interface ScoreboardProps {
   correctionMode?: boolean;
   /** roundIndex is 0-based. */
   onCellClick?: (roundIndex: number, playerId: string) => void;
-}
-
-function cardsInRound(round: number, peak: number): number {
-  return round <= peak ? round : 2 * peak - round;
 }
 
 const medal = (placement: number | undefined) =>
@@ -51,20 +47,24 @@ export function Scoreboard({ match, correctionMode = false, onCellClick }: Score
             {roundIndexes.map((r) => (
               <tr key={r}>
                 <th scope="row" className={styles.rowHead}>
-                  <Tooltip content={`Runde ${r + 1} · ${cardsInRound(r + 1, match.peak)} Karten`} side="right">
+                  <Tooltip content={`Runde ${r + 1} · ${match.roundCards[r] ?? 0} Karten`} side="right">
                     <span>{r + 1}</span>
                   </Tooltip>
-                  <span className={styles.cards}>{cardsInRound(r + 1, match.peak)} Karten</span>
+                  <span className={styles.cards}>{match.roundCards[r] ?? 0} Karten</span>
                 </th>
                 {match.players.map((p) => {
                   const bid = p.bids[r];
                   const score = p.scores[r];
                   const right = p.correct[r];
+                  const tricks = p.tricks[r] ?? null;
                   const placement = p.placements[r];
                   const label = `Runde ${r + 1}, ${p.name}: Ansage ${bid ?? "–"}, ${right ? "richtig" : "falsch"}, ${score ?? "–"} Punkte, Platz ${placement ?? "–"}`;
                   const content = (
                     <>
-                      <span>{bid}</span>
+                      <span>
+                        {bid}
+                        {tricks !== null && tricks !== bid && <span className={styles.tricks}>/{tricks}</span>}
+                      </span>
                       <span className={styles.sep} aria-hidden="true">
                         ┊
                       </span>
@@ -76,7 +76,7 @@ export function Scoreboard({ match, correctionMode = false, onCellClick }: Score
                       )}
                     </>
                   );
-                  const tip = `Ansage ${bid ?? "–"} · ${right ? "richtig" : "falsch"} · ${score ?? "–"} Punkte · Platz ${placement ?? "–"}${
+                  const tip = `Ansage ${bid ?? "–"}${tricks !== null ? ` · ${tricks} Stiche` : ""} · ${right ? "richtig" : "falsch"} · ${score ?? "–"} Punkte · Platz ${placement ?? "–"}${
                     correctionMode && onCellClick ? " · Antippen zum Korrigieren" : ""
                   }`;
                   const clickable = correctionMode && !!onCellClick;

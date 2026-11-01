@@ -74,3 +74,5 @@
 }
 .chartWrap { margin-top: 1rem; }
 .chartTitle { font-size: 0.95rem; color: var(--cream); margin-bottom: 0.5rem; }
+
+.cards { display: inline-block; margin-left: 0.6rem; padding: 0.05rem 0.6rem; border-radius: var(--radius-pill); background: var(--iris); color: #fff; font-size: 0.85em; font-weight: 900; vertical-align: middle; }

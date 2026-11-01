@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { DerivedPlayer } from "@scheisse/shared";
+import type { TrickDerivedPlayer as DerivedPlayer } from "@gamenight/shared";
 import { PageHeader, SkewRow, cx } from "../../ui";
-import { NoMatch, useRunningMatch } from "./shared";
+import { NoMatch, useRunningTrick } from "./shared";
 import styles from "./StatsPage.module.css";
 
 interface ListDef {
@@ -71,8 +71,8 @@ function PlayerStatCard({ player }: { player: DerivedPlayer }) {
   );
 }
 
-export function StatsPage() {
-  const run = useRunningMatch();
+export function TrickStatsPage() {
+  const run = useRunningTrick();
   if (!run) return <NoMatch title="Statistik" />;
   const { match } = run;
 

@@ -3,7 +3,7 @@
   display: flex; align-items: center; gap: 0.6rem;
   min-height: 3.25rem;
   padding: 0.25rem max(0.75rem, env(safe-area-inset-right)) 0.25rem max(0.75rem, env(safe-area-inset-left)); padding-top: max(0.25rem, env(safe-area-inset-top));
-  background: rgba(15, 25, 21, 0.92); backdrop-filter: blur(8px);
+  background: rgb(15, 25, 21);
   border-bottom: 1px solid rgba(226, 184, 76, 0.28);
 }
 .logo { flex: none; display: flex; align-items: center; gap: 0.45rem; min-height: 2.5rem; color: var(--brand-gold); }

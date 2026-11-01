@@ -1,5 +1,6 @@
+import type { TrickMatchState } from "@gamenight/shared";
 import { beforeEach, describe, expect, it } from "vitest";
-import { deriveMatch } from "@scheisse/shared";
+import { deriveMatch } from "@gamenight/shared";
 import { GAME_STORAGE_KEY, hasRunningMatch } from "../home/useRunningMatch";
 import { useGameStore } from "./store";
 
@@ -14,13 +15,15 @@ const reset = () => {
     version: 1,
     startedAt: null,
     dirty: false,
-    setupDraft: { players: [], deckSize: 32, maxCards: null },
+    setupDraft: { players: [], gameId: "scheisse", rulesetId: "scheisse.standard", deckSize: 32, maxCards: null, repeatPeak: false, firstBidder: "giver" },
     sortMode: "seat",
     syncStatus: "idle",
   });
 };
 
 const s = () => useGameStore.getState();
+/** Running state as trick-bidding match (these tests play Scheisse). */
+const t = () => s().state as TrickMatchState;
 
 function startWith(names: string[]) {
   for (const n of names) expect(s().addDraftPlayer({ name: n, userId: null })).toBeNull();
@@ -87,22 +90,22 @@ describe("game store: running match", () => {
 
   it("commits only when all are marked, and undo restores the round", () => {
     startWith(["A", "B"]);
-    const [a, b] = s().state!.setup.players;
+    const [a, b] = t().setup.players;
     s().setBid(a!.id, 1);
     s().commit(); // no-op: not all marked
-    expect(s().state!.rounds).toHaveLength(0);
+    expect(t().rounds).toHaveLength(0);
     s().setCorrect(a!.id, true);
     s().setCorrect(b!.id, false);
     s().commit();
-    const d = deriveMatch(s().state!);
+    const d = deriveMatch(t());
     expect(d.roundsPlayed).toBe(1);
     expect(d.players.find((p) => p.id === a!.id)?.total).toBe(11);
     expect(d.players.find((p) => p.id === b!.id)?.total).toBe(-10);
     expect(d.giverName).toBe("B");
     s().undo();
-    expect(s().state!.rounds).toHaveLength(0);
-    expect(s().state!.current.bids[a!.id]).toBe(1);
-    expect(s().state!.currentGiverId).toBe(a!.id);
+    expect(t().rounds).toHaveLength(0);
+    expect(t().current.bids[a!.id]).toBe(1);
+    expect(t().currentGiverId).toBe(a!.id);
   });
 
   it("returns an error message when the engine rejects a deck change", () => {
@@ -111,7 +114,7 @@ describe("game store: running match", () => {
     s().setAllCorrect(true);
     s().commit();
     expect(s().setDeck(52)).toBeNull();
-    expect(s().state!.setup.deckSize).toBe(52);
+    expect(t().setup.deckSize).toBe(52);
   });
 
   it("rejects an invalid bid without changing state", () => {
@@ -139,11 +142,11 @@ describe("game store: running match", () => {
     s().setDraftMaxCards(1);
     s().startMatch();
     expect(hasRunningMatch()).toBe(true);
-    const [a, b] = s().state!.setup.players;
+    const [a, b] = t().setup.players;
     s().setCorrect(a!.id, true);
     s().setCorrect(b!.id, false);
     s().commit();
-    expect(deriveMatch(s().state!).finished).toBe(true);
+    expect(deriveMatch(t()).finished).toBe(true);
     expect(hasRunningMatch()).toBe(false);
     s().undo(); // still possible while on the game pages
     expect(hasRunningMatch()).toBe(true);
@@ -172,14 +175,14 @@ describe("game store: running match", () => {
     s().linkDraftPlayer(g!.id, { id: "u-oli", username: "oliver" });
 
     s().startMatch();
-    const id = s().state!.setup.players[2]!.id;
+    const id = t().setup.players[2]!.id;
     expect(s().linkSeat(id, { id: "u-oli", username: "Zed" })).toMatch(/bereits/);
     expect(s().linkSeat(id, { id: "u-zed", username: "Zed" })).toBeNull();
-    expect(s().state!.setup.players[2]).toMatchObject({ name: "Zed", userId: "u-zed" });
+    expect(t().setup.players[2]).toMatchObject({ name: "Zed", userId: "u-zed" });
     expect(s().dirty).toBe(true);
     expect(s().linkSeat("nope", null)).toMatch(/Unbekannt/);
     expect(s().linkSeat(id, null, "Zeddy")).toBeNull();
-    expect(s().state!.setup.players[2]).toMatchObject({ name: "Zeddy", userId: null });
+    expect(t().setup.players[2]).toMatchObject({ name: "Zeddy", userId: null });
   });
 
   it("hasRunningMatch survives corrupt storage", () => {

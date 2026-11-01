@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { IoInformationCircleOutline } from "react-icons/io5";
 import { useQuery } from "@tanstack/react-query";
-import { STATS_CATEGORIES, STATS_PERIOD_LABELS, STATS_PERIODS, type LeaderboardEntryDto, type LeaderboardResponse, type StatsPeriod } from "@scheisse/shared";
+import { STATS_CATEGORIES, STATS_PERIOD_LABELS, STATS_PERIODS, type LeaderboardEntryDto, type LeaderboardResponse, type StatsPeriod } from "@gamenight/shared";
 import { apiGet, errorMessage } from "../../lib/api";
-import { Button, EmptyState, ErrorState, PageHeader, Segmented, SkewRow, Spinner, TextInput, cx } from "../../ui";
+import { EmptyState, ErrorState, IconButton, PageHeader, Segmented, SkewRow, Spinner, TextInput, cx } from "../../ui";
 import { useDebounced } from "../watch/useDebounced";
 import { StatsInfoModal } from "./StatsInfoModal";
+import { titleWithGame, useStatsGame, withGame } from "./statsGame";
 import { fmt1, fmtElo, fmtPercent, fmtPp, fmtSigned, sortEntries, type SortDir, type SortKey } from "./leaderboardUtils";
 import { AnimatedNumber, MotionLi, usePodiumMotion, useRowMotion } from "./statsMotion";
 import styles from "./Stats.module.css";
@@ -82,9 +84,10 @@ const profilePath = (e: LeaderboardEntryDto) => (e.userId ? `/stats/players/${e.
 
 function PodiumCard({ e, i }: { e: LeaderboardEntryDto; i: number }) {
   const m = usePodiumMotion(i);
+  const game = useStatsGame();
   return (
     <MotionLi className={cx(styles.podiumCard, styles[`p${i + 1}` as "p1"])} {...m}>
-      <Link to={profilePath(e)}>
+      <Link to={withGame(profilePath(e), game)}>
         <span className={styles.medal}>{i + 1}</span>
         <span className={styles.podiumName}>{e.name}</span>
         <span className={styles.podiumElo}>
@@ -109,13 +112,14 @@ function Podium({ entries }: { entries: LeaderboardEntryDto[] }) {
 
 function LbRow({ e, i, open, onToggle }: { e: LeaderboardEntryDto; i: number; open: boolean; onToggle: () => void }) {
   const m = useRowMotion(i);
+  const game = useStatsGame();
   return (
     <MotionLi className={styles.li} {...m}>
       <SkewRow as="div" tone={i % 2 ? "alt" : "default"} interactive className={styles.compactRow}>
         <div className={styles.rowWrap}>
           <div className={cx(styles.lbRow, e.provisional && styles.prov)}>
             <span className={styles.rank}>{e.provisional ? "–" : e.rank}</span>
-            <Link to={profilePath(e)} className={styles.rowLink}>
+            <Link to={withGame(profilePath(e), game)} className={styles.rowLink}>
               <Name e={e} />
             </Link>
             <EloCell e={e} />
@@ -147,6 +151,7 @@ function LbRow({ e, i, open, onToggle }: { e: LeaderboardEntryDto; i: number; op
 }
 
 export function Leaderboard() {
+  const game = useStatsGame();
   const [category, setCategory] = useState("gesamt");
   const [period, setPeriod] = useState<StatsPeriod>("all");
   const [sortKey, setSortKey] = useState<SortKey>("elo");
@@ -158,9 +163,9 @@ export function Leaderboard() {
   const term = useDebounced(search.trim(), 300);
 
   const query = useQuery({
-    queryKey: ["stats", "leaderboard", category, period, term],
+    queryKey: ["stats", "leaderboard", game, category, period, term],
     queryFn: ({ signal }) => {
-      const q = new URLSearchParams({ category, period });
+      const q = new URLSearchParams({ game, category, period });
       if (term) q.set("search", term);
       return apiGet<LeaderboardResponse>(`/stats/leaderboard?${q.toString()}`, { signal });
     },
@@ -197,7 +202,15 @@ export function Leaderboard() {
 
   return (
     <>
-      <PageHeader title="Bestenliste" back="/stats" />
+      <PageHeader
+        title={titleWithGame("Bestenliste", game)}
+        back="/stats"
+        actions={
+          <IconButton label="Wie wird gerechnet?" tooltip="Wie wird gerechnet?" onClick={() => setInfoOpen(true)}>
+            <IoInformationCircleOutline />
+          </IconButton>
+        }
+      />
       <main className={cx(styles.page, styles.pageWide)}>
         <div className={styles.controls}>
           <div className={styles.catScroll} role="group" aria-label="Kategorie">
@@ -213,13 +226,18 @@ export function Leaderboard() {
               onChange={setPeriod}
               options={STATS_PERIODS.map((p) => ({ value: p, label: STATS_PERIOD_LABELS[p] }))}
             />
-            <Button variant="secondary" size="sm" onClick={() => setInfoOpen(true)}>
-              Wie wird gerechnet?
-            </Button>
-            <TextInput label="Spieler suchen" hideLabel placeholder="Spieler suchen …" value={search} onChange={(e) => setSearch(e.target.value)} className={styles.search} />
-            <label className={styles.check}>
-              <input type="checkbox" checked={showProvisional} onChange={(e) => setShowProvisional(e.target.checked)} /> Vorläufige anzeigen
-            </label>
+            <div className={styles.searchRow}>
+              <TextInput label="Spieler suchen" hideLabel placeholder="Spieler suchen …" value={search} onChange={(e) => setSearch(e.target.value)} className={styles.search} />
+              <button
+                type="button"
+                className={styles.catChip}
+                aria-pressed={showProvisional}
+                title="Spieler mit wenigen Matches (vorläufige Wertung) anzeigen"
+                onClick={() => setShowProvisional((v) => !v)}
+              >
+                Vorläufige
+              </button>
+            </div>
           </div>
         </div>
 

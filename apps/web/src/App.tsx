@@ -5,6 +5,7 @@ import { NotFound } from "./components/NotFound";
 import { authRoutes } from "./features/auth/routes";
 import { gameRoutes } from "./features/game/routes";
 import { Home } from "./features/home/Home";
+import { rulesetRoutes } from "./features/rulesets/routes";
 import { statsRoutes } from "./features/stats/routes";
 import { watchRoutes } from "./features/watch/routes";
 
@@ -31,6 +32,7 @@ export const routes: RouteObject[] = [
       ...gameRoutes,
       ...watchRoutes,
       ...statsRoutes,
+      ...rulesetRoutes,
       { path: "*", element: <NotFound /> },
     ],
   },

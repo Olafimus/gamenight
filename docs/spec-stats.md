@@ -4,7 +4,7 @@ Nur **beendete** Matches zählen. Bestenliste/Profile enthalten registrierte Use
 
 ## Pro Match und Spieler (`match_results`)
 `final_score`, `placement` (Wettbewerbs-Rang, Gleichstand teilt besten Rang), `player_count`, `rounds`, `avg_score` (= final_score / rounds), `correct_rounds` (richtig angesagte Runden, aus `DerivedPlayer.correct`), `finished_at` (Zeitpunkt des Matchendes, bleibt bei erneutem Speichern erhalten). Migration `0001_stats_elo` legt die Spalten an und füllt bestehende Zeilen aus `matches.state` / `matches.finished_at` nach (Backfill).
-`rating`/`calcMatchRating`/`aggregateResults` bleiben aus Kompatibilitätsgründen in `@scheisse/shared`, werden aber nicht mehr angezeigt.
+`rating`/`calcMatchRating`/`aggregateResults` bleiben aus Kompatibilitätsgründen in `@gamenight/shared`, werden aber nicht mehr angezeigt.
 
 ## Formeln (`packages/shared/src/elo.ts`, reine Funktionen)
 - **Elo (mehrspielerfähig)**: Start 1000. Matches chronologisch nach `(finished_at, id)`. Pro Match paarweise Vergleich aller Spieler: Sieg 1, Gleichstand 0,5, Niederlage 0 nach Platzierung; `K = 32 / (n − 1)` pro Paar; erwartet `E = 1 / (1 + 10^((R_gegner − R_ich)/400))`; Delta = Σ K·(S − E). Alle Deltas eines Matches werden gleichzeitig angewendet (Summe = 0). Es gibt **eine** Elo über alle Matches; in Kategorie-/Zeitraum-Ansichten wird `eloDelta` („Elo ±“) = Summe der Deltas der Matches im Scope gezeigt.

@@ -6,14 +6,14 @@ import {
   commitRound,
   correctRound,
   createMatchState,
-  deriveMatch,
+  deriveTrickMatch as deriveMatch,
   maxAllowedCards,
   nextGiverId,
   peakCards,
-  rankTotals,
   rematch,
   reorderSeats,
   resetCurrentRound,
+  roundPlan,
   roundPoints,
   setAllCorrect,
   setBid,
@@ -23,7 +23,9 @@ import {
   totalRounds,
   undoRound,
 } from "./engine";
-import type { DeckSize, DerivedPlayer, MatchState } from "./types";
+import { rankTotals } from "../../core";
+import type { TrickDerivedPlayer as DerivedPlayer, TrickMatchState as MatchState } from "./types";
+type DeckSize = number;
 
 function deepFreeze<T>(o: T): T {
   if (o && typeof o === "object" && !Object.isFrozen(o)) {
@@ -390,5 +392,47 @@ describe("immutability", () => {
     const u = deepFreeze(undoRound(s));
     expect(() => rematch(u)).not.toThrow();
     expect(() => undoRound(deepFreeze(commitRound(setAllCorrect(u, true))))).not.toThrow();
+  });
+});
+
+describe("variants", () => {
+  const withRules = (s: MatchState, patch: { repeatPeak?: boolean; firstBidder?: "giver" | "afterGiver" }): MatchState => ({
+    ...s,
+    rules: {
+      ...s.rules,
+      rounds: { ...s.rules.rounds, repeatPeak: patch.repeatPeak ?? s.rules.rounds.repeatPeak },
+      bidding: { ...s.rules.bidding, firstBidder: patch.firstBidder ?? s.rules.bidding.firstBidder },
+    },
+  });
+
+  it("repeatPeak plays the peak hand size twice", () => {
+    const s = withRules(mk(4, 32, 3), { repeatPeak: true });
+    expect(roundPlan(s.rules, { deckSize: 32, maxCards: 3, playerCount: 4 })).toEqual([1, 2, 3, 3, 2, 1]);
+    expect(deriveMatch(s).totalRounds).toBe(6);
+    const asc = { ...s.rules, rounds: { ...s.rules.rounds, schedule: "ascending" as const } };
+    expect(roundPlan(asc, { deckSize: 32, maxCards: 3, playerCount: 4 })).toEqual([1, 2, 3, 3]);
+    const desc = { ...s.rules, rounds: { ...s.rules.rounds, schedule: "descending" as const } };
+    expect(roundPlan(desc, { deckSize: 32, maxCards: 3, playerCount: 4 })).toEqual([3, 3, 2, 1]);
+  });
+
+  it("without repeatPeak the pyramid is unchanged", () => {
+    expect(roundPlan(mk().rules, { deckSize: 32, maxCards: 3, playerCount: 4 })).toEqual([1, 2, 3, 2, 1]);
+  });
+
+  it("firstBidder: giver bids first by default, afterGiver = next seat", () => {
+    const s = mk();
+    expect(deriveMatch(s).bidderId).toBe("a");
+    const after = withRules(s, { firstBidder: "afterGiver" });
+    expect(deriveMatch(after).bidderId).toBe("b");
+    expect(deriveMatch(setGiver(after, "d")).bidderId).toBe("a");
+  });
+
+  it("states without variant fields behave like the defaults", () => {
+    const s = mk();
+    const legacy = JSON.parse(JSON.stringify(s)) as MatchState;
+    delete (legacy.rules.rounds as Partial<MatchState["rules"]["rounds"]>).repeatPeak;
+    delete (legacy.rules.bidding as Partial<MatchState["rules"]["bidding"]>).firstBidder;
+    expect(deriveMatch(legacy).totalRounds).toBe(deriveMatch(s).totalRounds);
+    expect(deriveMatch(legacy).bidderId).toBe("a");
   });
 });

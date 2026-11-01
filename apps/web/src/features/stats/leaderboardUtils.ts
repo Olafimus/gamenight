@@ -1,4 +1,4 @@
-import type { LeaderboardEntryDto } from "@scheisse/shared";
+import type { LeaderboardEntryDto } from "@gamenight/shared";
 
 export type SortKey = "elo" | "winRate" | "placementScore" | "avgPoints" | "hitRate" | "matchCount";
 export type SortDir = "asc" | "desc";

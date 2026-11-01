@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { ChangePasswordRequest, Credentials, RegisterRequest, UpdateProfileRequest, UserDto } from "@scheisse/shared";
+import type { ChangePasswordRequest, Credentials, RegisterRequest, UpdateProfileRequest, UserDto } from "@gamenight/shared";
 import { ApiRequestError, apiGet, apiPatch, apiPost } from "./api";
 
 export interface AuthContextValue {

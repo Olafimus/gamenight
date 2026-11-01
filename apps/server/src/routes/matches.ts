@@ -2,8 +2,10 @@ import { and, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { Router } from "express";
 import { z } from "zod";
 import {
+  assertMatchConsistent,
   createMatchSchema,
   deriveMatch,
+  getGame,
   listMatchesQuerySchema,
   matchResults,
   updateMatchSchema,
@@ -11,7 +13,7 @@ import {
   type DerivedMatch,
   type MatchState,
   type PlayerMatchResult,
-} from "@scheisse/shared";
+} from "@gamenight/shared";
 import type { Ctx } from "../app";
 import type { Db } from "../db/client";
 import { matchPlayers, matches, matchResults as matchResultsTable, users } from "../db/schema";
@@ -37,16 +39,13 @@ interface Prepared {
   results: (matchId: string) => PlayerMatchResult[];
 }
 
-/** Structural checks the engine does not enforce. Throws on inconsistency. */
-function assertConsistent(state: MatchState): void {
-  const ids = new Set(state.setup.players.map((p) => p.id));
-  if (ids.size !== state.setup.players.length) throw new Error("duplicate player ids");
-  if (!ids.has(state.currentGiverId)) throw new Error("unknown currentGiverId");
-  const known = (rec: Record<string, unknown>) => Object.keys(rec).every((k) => ids.has(k));
-  if (!known(state.current.bids) || !known(state.current.correct)) throw new Error("unknown player in current round");
-  for (const r of state.rounds) {
-    if (!ids.has(r.giverId) || !known(r.bids) || !known(r.correct)) throw new Error("unknown player in committed round");
-  }
+/** Game/kind checks on top of the engine's consistency checks. Throws on inconsistency. */
+function assertConsistent(state: MatchState, previous?: MatchState): void {
+  const game = getGame(state.gameId);
+  if (!game) throw new Error(`unknown game ${state.gameId}`);
+  if (game.kind !== state.kind) throw new Error(`game ${state.gameId} is not of kind ${state.kind}`);
+  if (previous && (previous.gameId !== state.gameId || previous.kind !== state.kind)) throw new Error("the game of a match can't change");
+  assertMatchConsistent(state);
 }
 
 const normName = (n: string) => n.trim().toLowerCase();
@@ -73,7 +72,7 @@ async function prepareState(db: Db, state: MatchState, previous?: MatchState): P
   let derived: DerivedMatch;
   let results: PlayerMatchResult[] | null = null;
   try {
-    assertConsistent(state);
+    assertConsistent(state, previous);
     derived = deriveMatch(state);
     if (derived.finished) results = matchResults("00000000-0000-0000-0000-000000000000", state);
   } catch (e) {
@@ -112,6 +111,7 @@ async function writeDerivedRows(tx: Tx, matchId: string, state: MatchState, prep
           playerId: r.playerId,
           userId: r.userId,
           name: r.name,
+          gameId: r.gameId,
           finalScore: r.finalScore,
           placement: r.placement,
           playerCount: r.playerCount,
@@ -166,6 +166,8 @@ export function matchesRouter(ctx: Ctx): Router {
                 code: generateCode(),
                 ownerUserId,
                 writeTokenHash: hashToken(token),
+                gameId: state.gameId,
+                rulesetId: state.ruleset.id,
                 state,
                 finished: prepared.derived.finished,
                 startedAt: now,
@@ -196,6 +198,7 @@ export function matchesRouter(ctx: Ctx): Router {
       const conds: SQL[] = [];
       if (q.status === "active") conds.push(eq(matches.finished, false));
       if (q.status === "finished") conds.push(eq(matches.finished, true));
+      if (q.game) conds.push(eq(matches.gameId, q.game));
       if (q.search) {
         const pattern = likeContains(q.search);
         conds.push(
@@ -271,6 +274,7 @@ export function matchesRouter(ctx: Ctx): Router {
         const [updated] = await tx
           .update(matches)
           .set({
+            rulesetId: body.state.ruleset.id,
             state: body.state,
             finished,
             finishedAt: finished ? (cur.finishedAt ?? now) : null,

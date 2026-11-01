@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { deriveMatch, type MatchDto, type MatchSummaryDto } from "@scheisse/shared";
+import { deriveMatch, getGame, type MatchDto, type MatchSummaryDto } from "@gamenight/shared";
 import { apiGet, errorMessage } from "../../lib/api";
 import { ButtonLink, EmptyState, ErrorState, PageHeader, RelativeTime, SkewRow, Spinner, TextInput, cx } from "../../ui";
 import { useDebounced } from "../watch/useDebounced";
@@ -42,7 +42,7 @@ export function MatchPreview({ id }: { id: string }) {
               <td>{p.name}</td>
               <td>{finished ? (p.placement ?? "–") : "–"}</td>
               <td>{p.total}</td>
-              <td>{p.stats.maxWinStreak}</td>
+              <td>{"stats" in p ? p.stats.maxWinStreak : "–"}</td>
             </tr>
           ))}
         </tbody>
@@ -94,7 +94,7 @@ export function MatchesStats() {
                           {!m.finished && <span className={styles.live}>läuft</span>}
                         </span>
                         <span className={styles.sub}>
-                          {m.playerCount} Spieler · <RelativeTime date={m.startedAt} />
+                          {getGame(m.gameId)?.name ?? m.gameId} · {m.playerCount} Spieler · <RelativeTime date={m.startedAt} />
                         </span>
                       </span>
                     </button>

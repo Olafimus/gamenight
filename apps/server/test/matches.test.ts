@@ -1,10 +1,10 @@
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
-import { deriveMatch, setBid, type MatchDto } from "@scheisse/shared";
+import { deriveMatch, setBid, type MatchDto } from "@gamenight/shared";
 import { users } from "../src/db/schema";
 import { cleanupStaleMatches } from "../src/jobs/cleanup";
-import { createMatch, playRound, playRounds, registerUser, setupTestApp, stateFor } from "./helpers";
+import { asTrick, createMatch, playRound, playRounds, registerUser, setupTestApp, stateFor } from "./helpers";
 
 const t = setupTestApp();
 beforeEach(() => t.reset());
@@ -55,7 +55,7 @@ describe("matches", () => {
 
   it("PUT requires the right write token", async () => {
     const { match, writeToken } = await createMatch(t.app, stateFor(guests()));
-    const next = setBid(match.state, "a", 1);
+    const next = setBid(asTrick(match.state), "a", 1);
     const none = await request(t.app).put(`/api/matches/${match.id}`).send({ state: next, version: 1 });
     expect(none.status).toBe(403);
     expect(none.body.code).toBe("forbidden");
@@ -71,8 +71,8 @@ describe("matches", () => {
     const { match, writeToken } = await createMatch(t.app, stateFor(guests()));
     const put = (state: typeof match.state, version: number) =>
       request(t.app).put(`/api/matches/${match.id}`).set("X-Write-Token", writeToken).send({ state, version });
-    expect((await put(setBid(match.state, "a", 1), 1)).status).toBe(200);
-    const stale = await put(setBid(match.state, "b", 1), 1);
+    expect((await put(setBid(asTrick(match.state), "a", 1), 1)).status).toBe(200);
+    const stale = await put(setBid(asTrick(match.state), "b", 1), 1);
     expect(stale.status).toBe(409);
     expect(stale.body.code).toBe("version_conflict");
     expect(stale.body.match.version).toBe(2);
@@ -110,7 +110,7 @@ describe("matches", () => {
   it("finishing writes results; undo removes them", async () => {
     const { match, writeToken } = await createMatch(t.app, stateFor(guests()));
     const total = deriveMatch(match.state).totalRounds;
-    const almost = playRounds(match.state, total - 1);
+    const almost = playRounds(asTrick(match.state), total - 1);
     expect(deriveMatch(almost).finished).toBe(false);
     let version = 1;
     const put = async (state: typeof match.state) => {
@@ -217,7 +217,7 @@ describe("guest names vs account usernames", () => {
     const upd = await request(t.app)
       .put(`/api/matches/${legacy.match.id}`)
       .set("X-Write-Token", legacy.writeToken)
-      .send({ state: playRound(legacy.match.state), version: 1 });
+      .send({ state: playRound(asTrick(legacy.match.state)), version: 1 });
     expect(upd.status).toBe(200);
 
     // but introducing a NEW guest seat named like an account is rejected on PUT

@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { credentialsSchema } from "@scheisse/shared";
+import { credentialsSchema } from "@gamenight/shared";
 import { ApiRequestError, errorMessage } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { Button, ConfirmDialog, PageHeader, TextInput } from "../../ui";

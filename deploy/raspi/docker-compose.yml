@@ -1,11 +1,11 @@
-# Scheisse auf dem Raspberry Pi (arm64, Raspberry Pi OS 64-bit).
+# Gamenight auf dem Raspberry Pi (arm64, Raspberry Pi OS 64-bit).
 # Nutzt nur fertige Images von Docker Hub – kein Build auf dem Pi.
 #
 #   cp .env.example .env    # Werte setzen (JWT_SECRET, POSTGRES_PASSWORD)
 #   docker login            # Repo ist privat
 #   docker compose up -d                    # App auf http://<pi>:8080
 #   docker compose --profile tools up -d    # zusätzlich pgAdmin auf http://<pi>:5050
-name: scheisse
+name: scheisse  # Projektname bewusst beibehalten: Volumes (DB-Daten) heissen scheisse_*
 
 x-logging: &logging
   driver: json-file
@@ -32,7 +32,7 @@ services:
       start_period: 30s
 
   server:
-    image: ${IMAGE_REPO:-olafimus/olivers-master-repo}:scheisse-server-${TAG:-1.0.0}
+    image: ${IMAGE_REPO:-olafimus/olivers-master-repo}:gamenight-server-${TAG:-1.0.0}
     restart: unless-stopped
     logging: *logging
     depends_on:
@@ -47,7 +47,7 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-}
 
   web:
-    image: ${IMAGE_REPO:-olafimus/olivers-master-repo}:scheisse-web-${TAG:-1.0.0}
+    image: ${IMAGE_REPO:-olafimus/olivers-master-repo}:gamenight-web-${TAG:-1.0.0}
     restart: unless-stopped
     logging: *logging
     depends_on:

@@ -15,13 +15,14 @@ import {
   type StatsPeriod,
   type StatsSubjectKind,
   type SubjectMatchRow,
-} from "@scheisse/shared";
+} from "@gamenight/shared";
 import type { Db } from "../db/client";
 import { matchPlayers, matches, matchResults, users } from "../db/schema";
 
 export const guestKey = (name: string) => `g:${name.trim().toLowerCase()}`;
 
 export interface StatRow extends SubjectMatchRow {
+  gameId: string;
   key: string;
   kind: StatsSubjectKind;
   userId: string | null;
@@ -44,6 +45,7 @@ export interface Subject {
 
 export interface Computed {
   version: number;
+  gameId: string;
   rows: StatRow[];
   subjects: Map<string, Subject>;
   byMatch: Map<string, StatRow[]>;
@@ -57,14 +59,45 @@ export interface LeaderboardResult {
   entries: LeaderboardEntryDto[];
 }
 
+interface Loaded {
+  version: number;
+  games: Map<string, Computed>;
+}
+
+/** Subjects, per-match rows and Elo of one game. `rows` must be chronological. */
+function computeGame(version: number, gameId: string, rows: StatRow[]): Computed {
+  const subjects = new Map<string, Subject>();
+  const byMatch = new Map<string, StatRow[]>();
+  for (const row of rows) {
+    let s = subjects.get(row.key);
+    if (!s) subjects.set(row.key, (s = { key: row.key, kind: row.kind, userId: row.userId, name: row.name, rows: [] }));
+    s.name = row.name; // rows are chronological: last spelling wins
+    s.rows.push(row);
+    let m = byMatch.get(row.matchId);
+    if (!m) byMatch.set(row.matchId, (m = []));
+    m.push(row);
+  }
+  for (const m of byMatch.values()) m.sort((a, b) => a.seat - b.seat);
+
+  const elo = computeElo(
+    [...byMatch.entries()].map(([matchId, rs]) => ({
+      matchId,
+      at: rs[0]!.at,
+      players: rs.map((x) => ({ key: x.key, placement: x.placement })),
+    })),
+  );
+  return { version, gameId, rows, subjects, byMatch, elo, memo: new Map() };
+}
+
 /**
- * In-memory cache of everything derived from finished matches (rows, Elo). Invalidated by a
+ * In-memory cache of everything derived from finished matches (rows, Elo). Computed separately per game
+ * (Elo and rankings never mix games). Invalidated by a
  * simple version counter whenever a match is created/updated/deleted or a guest is claimed.
  */
 export class StatsCache {
   private version = 0;
-  private current: Computed | null = null;
-  private loading: Promise<Computed> | null = null;
+  private current: Loaded | null = null;
+  private loading: Promise<Loaded> | null = null;
   /** number of full recomputations (for tests) */
   loads = 0;
 
@@ -74,7 +107,14 @@ export class StatsCache {
     this.version += 1;
   }
 
-  async get(): Promise<Computed> {
+  async get(gameId: string): Promise<Computed> {
+    const loaded = await this.loadAll();
+    let c = loaded.games.get(gameId);
+    if (!c) loaded.games.set(gameId, (c = computeGame(loaded.version, gameId, [])));
+    return c;
+  }
+
+  private async loadAll(): Promise<Loaded> {
     for (;;) {
       if (this.current && this.current.version === this.version) return this.current;
       let p = this.loading;
@@ -92,7 +132,7 @@ export class StatsCache {
     }
   }
 
-  private async load(version: number): Promise<Computed> {
+  private async load(version: number): Promise<Loaded> {
     this.loads += 1;
     const data = await this.db
       .select({
@@ -112,6 +152,7 @@ export class StatsCache {
       const userId = r.userId;
       return {
         matchId: r.matchId,
+        gameId: r.gameId,
         at: r.finishedAt.toISOString(),
         placement: r.placement,
         playerCount: r.playerCount,
@@ -131,27 +172,14 @@ export class StatsCache {
     });
     rows.sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || (a.matchId < b.matchId ? -1 : a.matchId > b.matchId ? 1 : 0));
 
-    const subjects = new Map<string, Subject>();
-    const byMatch = new Map<string, StatRow[]>();
-    for (const row of rows) {
-      let s = subjects.get(row.key);
-      if (!s) subjects.set(row.key, (s = { key: row.key, kind: row.kind, userId: row.userId, name: row.name, rows: [] }));
-      s.name = row.name; // rows are chronological: last spelling wins
-      s.rows.push(row);
-      let m = byMatch.get(row.matchId);
-      if (!m) byMatch.set(row.matchId, (m = []));
-      m.push(row);
-    }
-    for (const m of byMatch.values()) m.sort((a, b) => a.seat - b.seat);
 
-    const elo = computeElo(
-      [...byMatch.entries()].map(([matchId, rs]) => ({
-        matchId,
-        at: rs[0]!.at,
-        players: rs.map((x) => ({ key: x.key, placement: x.placement })),
-      })),
-    );
-    return { version, rows, subjects, byMatch, elo, memo: new Map() };
+    const byGame = new Map<string, StatRow[]>();
+    for (const row of rows) {
+      let g = byGame.get(row.gameId);
+      if (!g) byGame.set(row.gameId, (g = []));
+      g.push(row);
+    }
+    return { version, games: new Map([...byGame].map(([gameId, rs]) => [gameId, computeGame(version, gameId, rs)])) };
   }
 
   eloOf(c: Computed, key: string): number {

@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { deriveMatch, type MatchDto, type MatchSummaryDto } from "@scheisse/shared";
+import { deriveMatch, type MatchDto, type MatchSummaryDto } from "@gamenight/shared";
 import type { matches } from "../db/schema";
 
 export type MatchRow = typeof matches.$inferSelect;
@@ -45,10 +45,13 @@ export function toSummaryDto(row: MatchRow): MatchSummaryDto {
   return {
     id: row.id,
     code: row.code,
+    gameId: row.state.gameId,
+    rulesetName: row.state.ruleset.name,
     playerNames: row.state.setup.players.map((p) => p.name),
     playerCount: row.state.setup.players.length,
     roundNumber: d.roundNumber,
     totalRounds: d.totalRounds,
+    cardsThisRound: d.kind === "trick-bidding" ? d.cardsThisRound : null,
     finished: row.finished,
     startedAt: row.startedAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

@@ -2,7 +2,7 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { LeaderboardEntryDto, LeaderboardResponse } from "@scheisse/shared";
+import type { LeaderboardEntryDto, LeaderboardResponse } from "@gamenight/shared";
 import { fmt1, fmtPercent, fmtPp, fmtSigned, filterLeaderboard, sortEntries } from "./leaderboardUtils";
 import { Leaderboard } from "./Leaderboard";
 
@@ -32,6 +32,7 @@ const data = [
   e("Cleo", { elo: 1050, rank: 3, winRate: 0.9, avgPoints: 8, matchCount: 4 }),
 ];
 const response: LeaderboardResponse = {
+  game: "scheisse",
   category: "gesamt",
   period: "all",
   categories: [
@@ -102,8 +103,8 @@ describe("Leaderboard", () => {
     expect(names()).toEqual(["Cleo", "Anna", "Ben", "Gus"]);
     fireEvent.click(screen.getByRole("button", { name: /Nach Siegquote sortieren/ }));
     expect(names()).toEqual(["Ben", "Anna", "Cleo", "Gus"]);
-    expect(screen.getAllByTestId("lb-name").find((n) => n.textContent?.startsWith("Gus"))!.closest("a")).toHaveAttribute("href", "/stats/guests/Gus");
-    fireEvent.click(screen.getByLabelText("Vorläufige anzeigen"));
+    expect(screen.getAllByTestId("lb-name").find((n) => n.textContent?.startsWith("Gus"))!.closest("a")).toHaveAttribute("href", "/stats/guests/Gus?game=scheisse");
+    fireEvent.click(screen.getByRole("button", { name: "Vorläufige" }));
     expect(names()).toEqual(["Ben", "Anna", "Cleo"]);
   });
 });

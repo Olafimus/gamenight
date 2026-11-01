@@ -1,9 +1,29 @@
 /**
- * Statistics formulas. CONTRACT: signatures fixed.
- * Used by the server (leaderboard/profile) and web. See docs/spec-stats.md.
+ * Statistics formulas. Used by the server (leaderboard/profile) and web. See docs/spec-stats.md.
+ * Everything here is game-independent: it only needs totals and placements.
  */
-import { deriveMatch, rankTotals } from "./engine";
-import type { MatchState, PlayerMatchResult } from "./types";
+import { rankTotals } from "./core";
+import { deriveMatch, isTrickMatch, type MatchState } from "./match";
+
+/** Final result of one player in one finished match (input for statistics). */
+export interface PlayerMatchResult {
+  matchId: string;
+  gameId: string;
+  playerId: string;
+  userId: string | null;
+  name: string;
+  finalScore: number;
+  /** Competition rank by final score (ties share best rank; rules.winner decides the direction). */
+  placement: number;
+  playerCount: number;
+  /** Rounds (trick-bidding) or filled cells (score-sheet). */
+  rounds: number;
+  /** finalScore / rounds */
+  avgScore: number;
+  rating: number;
+  /** trick-bidding: rounds with a right bid (undefined for other kinds / legacy data). */
+  correctRounds?: number;
+}
 
 /** rating = 1/placement + playerCount/10 + avgScore/100 */
 export function calcMatchRating(placement: number, playerCount: number, avgScore: number): number {
@@ -14,25 +34,32 @@ export function calcMatchRating(placement: number, playerCount: number, avgScore
 export function matchResults(matchId: string, state: MatchState): PlayerMatchResult[] {
   const d = deriveMatch(state);
   if (!d.finished) throw new Error("Match is not finished");
-  const ranks = rankTotals(d.players.map((p) => p.total));
-  const rankOf = (i: number): number => ranks[i] ?? 1;
+  const ranks = rankTotals(
+    d.players.map((p) => p.total),
+    state.rules.winner,
+  );
   const playerCount = d.players.length;
+  const rounds = d.roundsPlayed;
+  const trick = isTrickMatch(state) ? deriveMatch(state) : null;
   return d.players.map((p, i) => {
-    const avgScore = p.total / d.roundsPlayed;
-    const placement = rankOf(i);
-    return {
+    const avgScore = rounds > 0 ? p.total / rounds : 0;
+    const placement = ranks[i] ?? 1;
+    const result: PlayerMatchResult = {
       matchId,
+      gameId: state.gameId,
       playerId: p.id,
       userId: p.userId,
       name: p.name,
       finalScore: p.total,
       placement,
       playerCount,
-      rounds: d.roundsPlayed,
+      rounds,
       avgScore,
       rating: calcMatchRating(placement, playerCount, avgScore),
-      correctRounds: p.correct.filter(Boolean).length,
     };
+    const tp = trick?.players[i];
+    if (tp) result.correctRounds = tp.correct.filter(Boolean).length;
+    return result;
   });
 }
 

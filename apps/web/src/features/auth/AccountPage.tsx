@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { userLabel, type ClaimGuestResponse } from "@scheisse/shared";
+import { userLabel, type ClaimGuestResponse } from "@gamenight/shared";
 import { ApiRequestError, apiPost, errorMessage } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { Button, PageHeader, Spinner, TextInput, useToast } from "../../ui";

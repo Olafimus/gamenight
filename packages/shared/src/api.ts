@@ -7,42 +7,15 @@
  * Match write access: header `X-Write-Token: <token>` (returned once on create).
  */
 import { z } from "zod";
-import { DECK_SIZES } from "./types";
+import { matchStateSchema, type MatchState } from "./match";
+import { GAME_IDS } from "./games";
+import { sheetRulesetSchema, trickRulesetSchema, type GameDefinition, type Ruleset } from "./ruleset";
 import { STATS_CATEGORY_IDS, STATS_PERIODS, type StatsPeriod } from "./elo";
 
 // ---------------------------------------------------------------- primitives
+// Match state schemas live with their kind (kinds/*/types.ts); `matchStateSchema` (match.ts) is the union.
 
-export const deckSizeSchema = z.union([z.literal(DECK_SIZES[0]), z.literal(DECK_SIZES[1]), z.literal(DECK_SIZES[2])]);
-
-export const matchPlayerSchema = z.object({
-  id: z.string().min(1).max(64),
-  name: z.string().trim().min(1).max(30),
-  userId: z.string().uuid().nullable(),
-});
-
-export const matchSetupSchema = z.object({
-  players: z.array(matchPlayerSchema).min(2).max(10),
-  deckSize: deckSizeSchema,
-  maxCards: z.number().int().min(1).nullable(),
-});
-
-const idRecord = <T extends z.ZodTypeAny>(v: T) => z.record(z.string(), v);
-
-export const roundEntrySchema = z.object({
-  giverId: z.string(),
-  bids: idRecord(z.number().int().min(0).max(32)),
-  correct: idRecord(z.boolean()),
-});
-
-export const matchStateSchema = z.object({
-  setup: matchSetupSchema,
-  rounds: z.array(roundEntrySchema).max(63),
-  current: z.object({
-    bids: idRecord(z.number().int().min(0).max(32)),
-    correct: idRecord(z.boolean()),
-  }),
-  currentGiverId: z.string(),
-});
+export const gameIdSchema = z.string().refine((v) => GAME_IDS.includes(v), "unknown game");
 
 // ---------------------------------------------------------------- errors
 
@@ -125,13 +98,16 @@ export interface MatchDto {
   id: string; // uuid
   code: string; // 5 chars, uppercase A-Z0-9 without ambiguous chars, unique
   ownerUserId: string | null;
-  state: z.infer<typeof matchStateSchema>;
+  state: MatchState;
   finished: boolean;
   startedAt: string; // ISO
   finishedAt: string | null;
   updatedAt: string;
   version: number; // increments on every successful PUT, starts at 1
 }
+
+/** MatchDto narrowed to one kind, e.g. MatchDtoOf<TrickMatchState>. */
+export type MatchDtoOf<S extends MatchState> = MatchDto & { state: S };
 
 export const createMatchSchema = z.object({ state: matchStateSchema });
 export type CreateMatchRequest = z.infer<typeof createMatchSchema>;
@@ -150,10 +126,15 @@ export type UpdateMatchRequest = z.infer<typeof updateMatchSchema>;
 export interface MatchSummaryDto {
   id: string;
   code: string;
+  gameId: string;
+  rulesetName: string;
   playerNames: string[];
   playerCount: number;
+  /** round (trick-bidding) or turn cycle (score-sheet) in progress */
   roundNumber: number;
   totalRounds: number;
+  /** trick-bidding: cards per player in the round in progress (null for other kinds) */
+  cardsThisRound?: number | null;
   finished: boolean;
   startedAt: string;
   updatedAt: string;
@@ -161,24 +142,53 @@ export interface MatchSummaryDto {
 
 export const listMatchesQuerySchema = z.object({
   status: z.enum(["active", "finished", "all"]).default("all"),
+  game: gameIdSchema.optional(),
   search: z.string().trim().max(50).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
 // POST   /api/matches                  body CreateMatchRequest -> 201 CreateMatchResponse
-//        (owner = logged-in user or null; server validates state with engine: deriveMatch must not throw)
+//        (owner = logged-in user or null; server validates state with engine: assertMatchConsistent + deriveMatch must not throw;
+//        legacy v1 states without `kind` are upgraded to Scheisse standard by the schema)
 // PUT    /api/matches/:id  X-Write-Token  body UpdateMatchRequest -> 200 MatchDto | 403 | 409 version_conflict (body: { error, code, match: MatchDto })
 //        When derived state becomes finished the first time: finishedAt set, match_results written.
 //        If a finished match is changed again (undo/correction) results are rewritten; if it becomes unfinished, results deleted, finishedAt null.
 // GET    /api/matches/:idOrCode         -> 200 MatchDto (code lookup case-insensitive)
-// GET    /api/matches?status&search&limit -> 200 MatchSummaryDto[] sorted startedAt desc; search = substring of code or any player name
+// GET    /api/matches?status&game&search&limit -> 200 MatchSummaryDto[] sorted startedAt desc; search = substring of code or any player name
 // DELETE /api/matches/:id  X-Write-Token -> 204
 // GET    /api/matches/:id/stream (SSE)  events: `match` (data: MatchDto) on connect + on every change; `deleted`; comment ping every 15s
 // GET    /api/matches/stream?status=active (SSE) events: `upsert` (MatchSummaryDto), `removed` ({id})
 
-// ---------------------------------------------------------------- statistics (users + guests)
+// ---------------------------------------------------------------- games & rulesets
+
+export type RulesetDto = Ruleset & {
+  builtin: boolean;
+  /** null for built-in rulesets */
+  ownerUserId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export interface GameCatalogDto {
+  games: GameDefinition[];
+  /** built-in rulesets + the logged-in user's own rulesets */
+  rulesets: RulesetDto[];
+}
+
+/** Body of POST/PUT /api/rulesets. `kind` must match the game's kind. */
+export const saveRulesetSchema = z.discriminatedUnion("kind", [trickRulesetSchema.omit({ id: true }), sheetRulesetSchema.omit({ id: true })]);
+export type SaveRulesetRequest = z.infer<typeof saveRulesetSchema>;
+
+// GET    /api/games                 -> 200 GameCatalogDto
+// POST   /api/rulesets  (logged in) body SaveRulesetRequest -> 201 RulesetDto | 400 validation (unknown game / kind mismatch)
+// PUT    /api/rulesets/:id (owner)  body SaveRulesetRequest -> 200 RulesetDto | 403 | 404 (gameId and kind can't change)
+// DELETE /api/rulesets/:id (owner)  -> 204 | 403 | 404
+//        Matches keep their rules snapshot, so editing/deleting a ruleset never changes existing matches.
+
+// ---------------------------------------------------------------- statistics (users + guests), always per game
 
 export const leaderboardQuerySchema = z.object({
+  game: gameIdSchema.default("scheisse"),
   category: z
     .string()
     .refine((v) => STATS_CATEGORY_IDS.includes(v), "unknown category")
@@ -227,14 +237,16 @@ export interface StatsCategoryDto {
 }
 
 export interface LeaderboardResponse {
+  game: string;
   category: string;
   period: StatsPeriod;
   /** only categories with data ("gesamt" first) */
   categories: StatsCategoryDto[];
   entries: LeaderboardEntryDto[];
 }
-// GET /api/stats/leaderboard?category=<id>&period=all|365d|90d|30d&search= -> 200 LeaderboardResponse
-//     users AND guests (grouped by lower(trim(name))) with >= 1 finished match in scope;
+// GET /api/stats/leaderboard?game=<gameId>&category=<id>&period=all|365d|90d|30d&search= -> 200 LeaderboardResponse
+//     game defaults to "scheisse"; Elo is computed separately per game.
+//     users AND guests (grouped by lower(trim(name))) with >= 1 finished match of that game in scope;
 //     sorted: ranked (>= 3 matches) by elo desc, then provisional by elo desc.
 
 export interface PlayerMatchDto {
@@ -270,7 +282,10 @@ export interface CategoryBreakdownDto {
   eloDelta: number;
 }
 
+export const profileQuerySchema = z.object({ game: gameIdSchema.default("scheisse") });
+
 export interface PlayerProfileDto {
+  game: string;
   subject: StatsSubjectDto;
   overall: LeaderboardEntryDto & { placements: Record<number, number> };
   elo: number;
@@ -280,8 +295,8 @@ export interface PlayerProfileDto {
   versus: { userId: string | null; name: string; matches: number; wins: number }[];
   matches: PlayerMatchDto[]; // finishedAt desc
 }
-// GET /api/stats/players/:userId -> 200 PlayerProfileDto | 404
-// GET /api/stats/guests/:name (URL-encoded, case-insensitive) -> 200 PlayerProfileDto (subject.kind "guest") | 404 if no results
+// GET /api/stats/players/:userId?game= -> 200 PlayerProfileDto | 404
+// GET /api/stats/guests/:name?game= (URL-encoded, case-insensitive) -> 200 PlayerProfileDto (subject.kind "guest") | 404 if no results in that game
 
 export const claimGuestSchema = z.object({ name: z.string().trim().min(1).max(30) });
 export type ClaimGuestRequest = z.infer<typeof claimGuestSchema>;

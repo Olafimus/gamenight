@@ -3,26 +3,44 @@ import { persist, type PersistStorage, type StorageValue } from "zustand/middlew
 import { nanoid } from "nanoid";
 import {
   canCommitRound,
+  canUndoEntry,
   canUndoRound,
+  clearEntry,
   commitRound,
+  correctEntry,
   correctRound,
+  createMatch,
+  defaultRuleset,
   deriveMatch,
-  createMatchState,
+  getBuiltinRuleset,
+  getGame,
+  isTrickMatch,
+  mapPlayers,
   maxAllowedCards,
-  rematch as engineRematch,
+  rematchMatch,
   reorderSeats as engineReorderSeats,
+  reorderSheetSeats,
   resetCurrentRound,
+  scoreEntry,
   setAllCorrect,
   setBid,
   setCorrect,
   setDeckSize,
   setGiver,
+  setTricks,
+  undoEntry,
   undoRound,
-  type DeckSize,
+  upgradeMatchState,
+  MAX_PLAYERS as ENGINE_MAX_PLAYERS,
+  type FirstBidder,
   type MatchPlayer,
   type MatchState,
+  type Ruleset,
+  type SheetEntryInput,
+  type SheetMatchState,
+  type TrickMatchState,
   userLabel,
-} from "@scheisse/shared";
+} from "@gamenight/shared";
 import { GAME_STORAGE_KEY } from "../home/useRunningMatch";
 import { translateEngineError } from "./errors";
 import { apiDelete } from "../../lib/api";
@@ -33,13 +51,21 @@ export type SyncStatus = "idle" | "synced" | "syncing" | "offline";
 export type GameView = "cards" | "compact" | "wizard" | "table" | "split";
 export const GAME_VIEWS: GameView[] = ["compact", "wizard", "table", "split", "cards"];
 
-export const MAX_PLAYERS = 10;
+export const MAX_PLAYERS = ENGINE_MAX_PLAYERS;
 export const MAX_NAME_LENGTH = 30;
 
 export interface SetupDraft {
   players: MatchPlayer[];
-  deckSize: DeckSize;
+  gameId: string;
+  /** Built-in or custom ruleset id of the chosen game. */
+  rulesetId: string;
+  /** trick-bidding only */
+  deckSize: number;
+  /** trick-bidding only */
   maxCards: number | null;
+  /** trick-bidding variants: initialised from the ruleset, applied to the match rules on start */
+  repeatPeak: boolean;
+  firstBidder: FirstBidder;
 }
 
 export interface AccountRef {
@@ -76,7 +102,47 @@ export const firstUpper = (name: string): string => {
   return t.charAt(0).toUpperCase() + t.slice(1);
 };
 
-const emptyDraft = (): SetupDraft => ({ players: [], deckSize: 32, maxCards: null });
+
+const DEFAULT_GAME = "scheisse";
+
+/** Variant defaults of a ruleset (trick-bidding; other kinds have none). */
+const variantsOf = (rs: Ruleset): Pick<SetupDraft, "repeatPeak" | "firstBidder"> =>
+  rs.kind === "trick-bidding"
+    ? { repeatPeak: rs.rules.rounds.repeatPeak ?? false, firstBidder: rs.rules.bidding.firstBidder ?? "giver" }
+    : { repeatPeak: false, firstBidder: "giver" };
+
+function draftFor(gameId: string, players: MatchPlayer[] = []): SetupDraft {
+  const rs = defaultRuleset(gameId);
+  return {
+    players,
+    gameId,
+    rulesetId: rs.id,
+    deckSize: rs.kind === "trick-bidding" ? rs.rules.deck.defaultSize : 0,
+    maxCards: null,
+    ...variantsOf(rs),
+  };
+}
+
+/** The ruleset with the draft's chosen variants applied (what the match is started with). */
+export function withVariants(rs: Ruleset, d: Pick<SetupDraft, "repeatPeak" | "firstBidder">): Ruleset {
+  if (rs.kind !== "trick-bidding") return rs;
+  return {
+    ...rs,
+    rules: {
+      ...rs.rules,
+      rounds: { ...rs.rules.rounds, repeatPeak: rs.rules.rounds.schedule !== "fixed" && d.repeatPeak },
+      bidding: { ...rs.rules.bidding, firstBidder: d.firstBidder },
+    },
+  };
+}
+
+const emptyDraft = (): SetupDraft => draftFor(DEFAULT_GAME);
+
+/** Built-in ruleset of the draft (custom rulesets are passed to startMatch by the setup page). */
+export function builtinRulesetOf(d: SetupDraft): Ruleset {
+  const rs = getBuiltinRuleset(d.rulesetId);
+  return rs && rs.gameId === d.gameId ? rs : defaultRuleset(d.gameId);
+}
 
 interface PersistedPart {
   state: MatchState | null;
@@ -91,7 +157,7 @@ interface PersistedPart {
   dirty: boolean;
   setupDraft: SetupDraft;
   sortMode: SortMode;
-  /** Chosen view of the running game; null = automatic by screen size. */
+  /** Chosen view of the running trick game; null = automatic by screen size. */
   view: GameView | null;
   /** Table view: how many seats the table is turned, so the viewer's own seat can sit at the bottom. */
   tableRotation: number;
@@ -109,25 +175,40 @@ export interface GameStore extends PersistedPart {
   addDraftPlayer: (player: { name: string; userId: string | null }) => string | null;
   removeDraftPlayer: (id: string) => void;
   reorderDraft: (orderedIds: string[]) => void;
-  setDraftDeck: (deck: DeckSize) => void;
+  /** Switches the game (keeps the players, resets ruleset and options to the game's defaults). */
+  setDraftGame: (gameId: string) => void;
+  /** Ruleset of the current game (built-in or custom); adopts its deck default if needed. */
+  setDraftRuleset: (ruleset: Ruleset) => void;
+  setDraftDeck: (deck: number) => void;
   setDraftMaxCards: (maxCards: number | null) => void;
-  startMatch: () => string | null;
+  setDraftVariants: (patch: Partial<Pick<SetupDraft, "repeatPeak" | "firstBidder">>) => void;
+  /** Starts with `ruleset` (default: the draft's built-in ruleset). */
+  startMatch: (ruleset?: Ruleset) => string | null;
   /** Link a setup seat to an account (null = back to guest). Returns an error message or null. */
   linkDraftPlayer: (playerId: string, account: AccountRef | null, guestName?: string) => string | null;
   /** Same for the running match. */
   linkSeat: (playerId: string, account: AccountRef | null, guestName?: string) => string | null;
 
-  // running game (each returns an error message or null)
+  // running trick-bidding game (each returns an error message or null)
   setBid: (playerId: string, bid: number) => string | null;
   setCorrect: (playerId: string, correct: boolean) => string | null;
+  setTricks: (playerId: string, tricks: number) => string | null;
   setAllCorrect: (correct: boolean) => string | null;
   resetRound: () => string | null;
   commit: () => string | null;
   undo: () => string | null;
-  correct: (roundIndex: number, playerId: string, patch: { bid?: number; correct?: boolean }) => string | null;
-  reorderSeats: (orderedIds: string[]) => string | null;
+  correct: (roundIndex: number, playerId: string, patch: { bid?: number; correct?: boolean; tricks?: number }) => string | null;
   setGiver: (playerId: string) => string | null;
-  setDeck: (deck: DeckSize) => string | null;
+  setDeck: (deck: number) => string | null;
+
+  // running score-sheet game
+  scoreEntry: (input: SheetEntryInput) => string | null;
+  undoEntry: () => string | null;
+  correctEntry: (entryIndex: number, patch: Pick<SheetEntryInput, "dice" | "points" | "repeat">) => string | null;
+  clearEntry: (entryIndex: number) => string | null;
+
+  // any game
+  reorderSeats: (orderedIds: string[]) => string | null;
   rematch: () => string | null;
   endGame: () => void;
   /** Leaves a (finished) match: clears the running state but keeps the setup draft players. */
@@ -146,8 +227,18 @@ export interface GameStore extends PersistedPart {
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 function normalizeDraft(d: SetupDraft): SetupDraft {
+  if (d.deckSize <= 0) return d;
   const allowed = maxAllowedCards(d.deckSize, Math.max(d.players.length, 2));
   return d.maxCards !== null && d.maxCards > allowed ? { ...d, maxCards: null } : d;
+}
+
+/** Drafts persisted by older versions have no game. */
+function upgradeDraft(d: Partial<SetupDraft> | undefined): SetupDraft {
+  if (!d || !d.gameId || !getGame(d.gameId)) {
+    const base = draftFor(DEFAULT_GAME, d?.players ?? []);
+    return { ...base, deckSize: d?.deckSize ?? base.deckSize, maxCards: d?.maxCards ?? null };
+  }
+  return { ...draftFor(d.gameId, d.players ?? []), ...d } as SetupDraft;
 }
 
 const noMatch = {
@@ -172,6 +263,7 @@ const newMatchMeta = {
 /**
  * Flat storage format: the persisted JSON is `{ state: MatchState | null, matchId, code, writeToken, version, ..., __v }`
  * (not zustand's default `{ state: {...}, version }` wrapper) so hasRunningMatch() sees the match at top-level `state`.
+ * States and drafts of older app versions are upgraded on load.
  */
 const flatStorage: PersistStorage<PersistedPart> = {
   getItem: (name) => {
@@ -179,7 +271,12 @@ const flatStorage: PersistStorage<PersistedPart> = {
       const raw = window.localStorage.getItem(name);
       if (!raw) return null;
       const { __v, ...rest } = JSON.parse(raw) as PersistedPart & { __v?: number };
-      return { state: rest as PersistedPart, version: __v ?? 1 };
+      const part: PersistedPart = {
+        ...rest,
+        state: rest.state ? (upgradeMatchState(rest.state) as MatchState) : null,
+        setupDraft: upgradeDraft(rest.setupDraft),
+      };
+      return { state: part, version: __v ?? 1 };
     } catch {
       return null;
     }
@@ -215,6 +312,16 @@ export const useGameStore = create<GameStore>()(
           return translateEngineError(e);
         }
       };
+      const applyTrick = (fn: (s: TrickMatchState) => TrickMatchState) =>
+        apply((s) => {
+          if (!isTrickMatch(s)) throw new Error("Not a trick-bidding match");
+          return fn(s);
+        });
+      const applySheet = (fn: (s: SheetMatchState) => SheetMatchState) =>
+        apply((s) => {
+          if (s.kind !== "score-sheet") throw new Error("Not a score-sheet match");
+          return fn(s);
+        });
 
       return {
         ...noMatch,
@@ -249,8 +356,18 @@ export const useGameStore = create<GameStore>()(
             if (players.length !== s.setupDraft.players.length) return s;
             return { setupDraft: { ...s.setupDraft, players } };
           }),
+        setDraftGame: (gameId) => set((s) => (getGame(gameId) ? { setupDraft: draftFor(gameId, s.setupDraft.players) } : s)),
+        setDraftRuleset: (ruleset) =>
+          set((s) => {
+            if (ruleset.gameId !== s.setupDraft.gameId) return s;
+            const deck = ruleset.kind === "trick-bidding" ? ruleset.rules.deck : null;
+            const deckSize = deck ? (deck.sizes.includes(s.setupDraft.deckSize) ? s.setupDraft.deckSize : deck.defaultSize) : 0;
+            const maxCards = ruleset.kind === "trick-bidding" && ruleset.rules.rounds.allowMaxCards ? s.setupDraft.maxCards : null;
+            return { setupDraft: normalizeDraft({ ...s.setupDraft, rulesetId: ruleset.id, deckSize, maxCards, ...variantsOf(ruleset) }) };
+          }),
         setDraftDeck: (deckSize) => set((s) => ({ setupDraft: normalizeDraft({ ...s.setupDraft, deckSize }) })),
         setDraftMaxCards: (maxCards) => set((s) => ({ setupDraft: normalizeDraft({ ...s.setupDraft, maxCards }) })),
+        setDraftVariants: (patch) => set((s) => ({ setupDraft: { ...s.setupDraft, ...patch } })),
         linkDraftPlayer: (playerId, account, guestName) => {
           const d = get().setupDraft;
           const res = relinkPlayers(d.players, playerId, account, guestName);
@@ -267,16 +384,18 @@ export const useGameStore = create<GameStore>()(
               err = r;
               return m;
             }
-            return { ...m, setup: { ...m.setup, players: r } };
+            const byId = new Map(r.map((p) => [p.id, p]));
+            return mapPlayers(m, (p) => byId.get(p.id) ?? p);
           });
           if (res || err) return res ?? err;
           if (account) useLocalHistory.getState().addKnownPlayer({ name: firstUpper(userLabel(account)), userId: account.id });
           return null;
         },
-        startMatch: () => {
+        startMatch: (ruleset) => {
           const d = get().setupDraft;
+          const rs = ruleset ?? builtinRulesetOf(d);
           try {
-            const state = createMatchState({ players: d.players, deckSize: d.deckSize, maxCards: d.maxCards });
+            const state = createMatch(withVariants(rs, d), d.players, { deckSize: d.deckSize || undefined, maxCards: d.maxCards });
             set({ ...newMatchMeta, state, localId: nanoid(12), startedAt: new Date().toISOString(), syncStatus: "idle" });
             return null;
           } catch (e) {
@@ -284,23 +403,30 @@ export const useGameStore = create<GameStore>()(
           }
         },
 
-        setBid: (id, bid) => apply((s) => setBid(s, id, bid)),
-        setCorrect: (id, c) => apply((s) => setCorrect(s, id, c)),
-        setAllCorrect: (c) => apply((s) => setAllCorrect(s, c)),
-        resetRound: () => apply(resetCurrentRound),
-        commit: () => apply((s) => (canCommitRound(s) ? commitRound(s) : s)),
-        undo: () => apply((s) => (canUndoRound(s) ? undoRound(s) : s)),
-        correct: (r, id, patch) => apply((s) => correctRound(s, r, id, patch)),
-        reorderSeats: (ids) => apply((s) => engineReorderSeats(s, ids)),
-        setGiver: (id) => apply((s) => setGiver(s, id)),
-        setDeck: (deck) => apply((s) => setDeckSize(s, deck)),
+        setBid: (id, bid) => applyTrick((s) => setBid(s, id, bid)),
+        setCorrect: (id, c) => applyTrick((s) => setCorrect(s, id, c)),
+        setTricks: (id, t) => applyTrick((s) => setTricks(s, id, t)),
+        setAllCorrect: (c) => applyTrick((s) => setAllCorrect(s, c)),
+        resetRound: () => applyTrick(resetCurrentRound),
+        commit: () => applyTrick((s) => (canCommitRound(s) ? commitRound(s) : s)),
+        undo: () => applyTrick((s) => (canUndoRound(s) ? undoRound(s) : s)),
+        correct: (r, id, patch) => applyTrick((s) => correctRound(s, r, id, patch)),
+        setGiver: (id) => applyTrick((s) => setGiver(s, id)),
+        setDeck: (deck) => applyTrick((s) => setDeckSize(s, deck)),
+
+        scoreEntry: (input) => applySheet((s) => scoreEntry(s, input)),
+        undoEntry: () => applySheet((s) => (canUndoEntry(s) ? undoEntry(s) : s)),
+        correctEntry: (i, patch) => applySheet((s) => correctEntry(s, i, patch)),
+        clearEntry: (i) => applySheet((s) => clearEntry(s, i)),
+
+        reorderSeats: (ids) => apply((s) => (isTrickMatch(s) ? engineReorderSeats(s, ids) : reorderSheetSeats(s, ids))),
         rematch: () => {
           const cur = get().state;
           if (!cur) return "Kein laufendes Spiel";
           try {
             set({
               ...newMatchMeta,
-              state: engineRematch(cur),
+              state: rematchMatch(cur),
               localId: nanoid(12),
               startedAt: new Date().toISOString(),
               syncStatus: "idle",
@@ -317,9 +443,20 @@ export const useGameStore = create<GameStore>()(
             // Unfinished but synced: remove the server copy so spectators don't see a dead match (best effort).
             apiDelete(`/matches/${matchId}`, { headers: { "X-Write-Token": writeToken } }).catch(() => undefined);
           }
-          // keep the players for the next setup
+          // keep players, game and ruleset for the next setup
           const setupDraft: SetupDraft = cur
-            ? { players: cur.setup.players, deckSize: cur.setup.deckSize, maxCards: cur.setup.maxCards }
+            ? {
+                ...draftFor(getGame(cur.gameId) ? cur.gameId : DEFAULT_GAME, cur.setup.players),
+                rulesetId: cur.ruleset.id,
+                ...(isTrickMatch(cur)
+                  ? {
+                      deckSize: cur.setup.deckSize,
+                      maxCards: cur.setup.maxCards,
+                      repeatPeak: cur.rules.rounds.repeatPeak ?? false,
+                      firstBidder: cur.rules.bidding.firstBidder ?? "giver",
+                    }
+                  : {}),
+              }
             : get().setupDraft;
           set({ ...noMatch, setupDraft, syncStatus: "idle" });
         },

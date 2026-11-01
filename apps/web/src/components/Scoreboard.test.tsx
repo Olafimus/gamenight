@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { DerivedMatch, DerivedPlayer } from "@scheisse/shared";
+import type { TrickDerivedMatch as DerivedMatch, TrickDerivedPlayer as DerivedPlayer } from "@gamenight/shared";
 import { Scoreboard } from "./Scoreboard";
 
 const stats = {
@@ -10,19 +10,21 @@ const stats = {
 
 function player(id: string, name: string, seat: number, p: Partial<DerivedPlayer>): DerivedPlayer {
   return {
-    id, name, userId: null, seat, bids: [], correct: [], roundPoints: [], scores: [], total: 0,
+    id, name, userId: null, seat, bids: [], correct: [], tricks: [], roundPoints: [], scores: [], total: 0,
     placements: [], placement: null, stats, ...p,
   };
 }
 
 const match: DerivedMatch = {
+  kind: "trick-bidding", gameId: "scheisse", roundCards: [1, 2, 3, 2, 1],
   players: [
     player("a", "Anna", 0, { bids: [1, 0], correct: [true, false], scores: [11, 1], placements: [1, 2], total: 1, placement: 2 }),
     player("b", "Ben", 1, { bids: [0, 1], correct: [false, true], scores: [-10, 0], placements: [2, 3], total: 0, placement: 3 }),
     player("c", "Cleo", 2, { bids: [0, 0], correct: [true, true], scores: [10, 20], placements: [3, 1], total: 20, placement: 1 }),
   ],
   peak: 3, totalRounds: 5, roundsPlayed: 2, roundNumber: 3, cardsThisRound: 3,
-  giverId: "c", giverName: "Cleo", calledSum: 0, sumMatchesCards: false, allMarked: false, finished: false,
+  giverId: "c", giverName: "Cleo", bidderId: "c", bidderName: "Cleo", calledSum: 0, sumMatchesCards: false, bidSumAllowed: true, tricksSum: 0, tricksSumValid: true,
+  allMarked: false, finished: false,
 };
 
 describe("Scoreboard", () => {

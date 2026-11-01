@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commitRound, createMatchState, setAllCorrect, setBid, setCorrect } from "./engine";
+import { commitRound, createMatchState, setAllCorrect, setBid, setCorrect } from "./kinds/trick/engine";
 import {
   aggregateByPlayerCount,
   aggregateResults,
@@ -7,7 +7,8 @@ import {
   matchResults,
   versusTable,
 } from "./stats";
-import type { MatchState, PlayerMatchResult } from "./types";
+import type { TrickMatchState as MatchState } from "./kinds/trick/types";
+import type { PlayerMatchResult } from "./stats";
 
 function deepFreeze<T>(o: T): T {
   if (o && typeof o === "object" && !Object.isFrozen(o)) {
@@ -37,6 +38,7 @@ function finishedMatch(): MatchState {
 function res(over: Partial<PlayerMatchResult>): PlayerMatchResult {
   const base: PlayerMatchResult = {
     matchId: "m1",
+    gameId: "scheisse",
     playerId: "p",
     userId: "u1",
     name: "A",

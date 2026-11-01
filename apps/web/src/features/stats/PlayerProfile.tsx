@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { userLabel, type ClaimGuestResponse, type PlayerProfileDto } from "@scheisse/shared";
+import { userLabel, type ClaimGuestResponse, type PlayerProfileDto } from "@gamenight/shared";
 import { ApiRequestError, apiGet, apiPost, errorMessage } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { Button, ButtonLink, ConfirmDialog, EmptyState, ErrorState, PageHeader, RelativeTime, SkewRow, Spinner } from "../../ui";
 import { fmt1, fmtElo, fmtPercent, fmtPp, fmtSigned } from "./leaderboardUtils";
 import { Sparkline } from "./Sparkline";
+import { titleWithGame, useStatsGame, withGame } from "./statsGame";
 import { AnimatedNumber } from "./statsMotion";
 import styles from "./Stats.module.css";
 
 export function PlayerProfile() {
   const { id = "", name = "" } = useParams();
   const isGuest = name !== "";
-  const path = isGuest ? `/stats/guests/${encodeURIComponent(name)}` : `/stats/players/${encodeURIComponent(id)}`;
+  const game = useStatsGame();
+  const path = `${isGuest ? `/stats/guests/${encodeURIComponent(name)}` : `/stats/players/${encodeURIComponent(id)}`}?game=${encodeURIComponent(game)}`;
   const { user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -27,13 +29,13 @@ export function PlayerProfile() {
     },
   });
   const query = useQuery({
-    queryKey: ["stats", isGuest ? "guest" : "player", isGuest ? name.toLowerCase() : id],
+    queryKey: ["stats", isGuest ? "guest" : "player", isGuest ? name.toLowerCase() : id, game],
     queryFn: ({ signal }) => apiGet<PlayerProfileDto>(path, { signal }),
     retry: (n, err) => !(err instanceof ApiRequestError && err.status === 404) && n < 2,
   });
 
   const p = query.data;
-  const header = <PageHeader title={p?.subject.name ?? (isGuest ? name : "Spielerprofil")} back="/stats/players" />;
+  const header = <PageHeader title={titleWithGame(p?.subject.name ?? (isGuest ? name : "Spielerprofil"), game)} back={withGame("/stats/players", game)} />;
 
   if (query.isPending)
     return (
@@ -49,7 +51,7 @@ export function PlayerProfile() {
         {header}
         <main className={styles.page}>
           {notFound ? (
-            <EmptyState icon="🔍" title="Spieler nicht gefunden" text="Dieser Spieler existiert nicht oder hat noch kein Match beendet." action={<ButtonLink to="/stats/players">Zur Bestenliste</ButtonLink>} />
+            <EmptyState icon="🔍" title="Keine Matches" text="Dieser Spieler existiert nicht oder hat in diesem Spiel noch kein Match beendet." action={<ButtonLink to="/stats/players">Zur Bestenliste</ButtonLink>} />
           ) : (
             <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
           )}
@@ -197,9 +199,9 @@ export function PlayerProfile() {
                   <tr key={v.userId ?? `g:${v.name}`}>
                     <td>
                       {v.userId ? (
-                        <Link to={`/stats/players/${v.userId}`}>{v.name}</Link>
+                        <Link to={withGame(`/stats/players/${v.userId}`, game)}>{v.name}</Link>
                       ) : (
-                        <Link to={`/stats/guests/${encodeURIComponent(v.name)}`} title="Gast">
+                        <Link to={withGame(`/stats/guests/${encodeURIComponent(v.name)}`, game)} title="Gast">
                           {v.name}
                         </Link>
                       )}

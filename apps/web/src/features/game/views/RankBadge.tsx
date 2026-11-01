@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { FaCrown, FaMedal } from "react-icons/fa6";
-import type { DerivedPlayer } from "@scheisse/shared";
+import type { TrickDerivedPlayer as DerivedPlayer } from "@gamenight/shared";
 import { cx } from "../../../ui";
 import styles from "./RankBadge.module.css";
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { MatchSummaryDto } from "@scheisse/shared";
+import { getGame, type MatchSummaryDto } from "@gamenight/shared";
 import { apiGet, errorMessage } from "../../lib/api";
 import { useEventSource } from "../../lib/useEventSource";
 import { AnimatePresence, Button, EmptyState, ErrorState, FadeIn, PageHeader, RelativeTime, Segmented, SkewRow, Spinner, TextInput, Tooltip, motion, springs, useReducedMotion } from "../../ui";
@@ -151,12 +151,17 @@ export function WatchLobby() {
                     <Tooltip content="Match-Code">
                       <span className={styles.code}>{m.code}</span>
                     </Tooltip>
-                    <span className={styles.count}>{m.playerCount} Spieler</span>
+                    <span className={styles.count}>
+                      {getGame(m.gameId)?.name ?? m.gameId} · {m.playerCount} Spieler
+                    </span>
                     <span className={styles.names} title={m.playerNames.join(", ")}>
                       {m.playerNames.join(", ")}
                     </span>
                     <span className={styles.meta}>
-                      <span>{m.finished ? "Beendet" : `Runde ${m.roundNumber}/${m.totalRounds}`}</span>
+                      <span>
+                        {m.finished ? "Beendet" : `Runde ${m.roundNumber}/${m.totalRounds}`}
+                        {!m.finished && typeof m.cardsThisRound === "number" && ` · ${m.cardsThisRound} ${m.cardsThisRound === 1 ? "Karte" : "Karten"}`}
+                      </span>
                       <RelativeTime date={m.startedAt} />
                     </span>
                   </span>

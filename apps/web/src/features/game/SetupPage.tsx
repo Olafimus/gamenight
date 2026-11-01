@@ -3,22 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { IoAdd, IoPersonAdd } from "react-icons/io5";
 import {
-  DECK_SIZES,
+  defaultRuleset,
   maxAllowedCards,
-  peakCards,
-  totalRounds,
-  type DeckSize,
+  roundPlan,
+  sheetCategories,
   type MatchPlayer,
   type PlayerSearchResultDto,
   type UserDto,
   userLabel,
-} from "@scheisse/shared";
+} from "@gamenight/shared";
 import { apiGet, errorMessage } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { useLocalHistory } from "../../lib/localHistory";
 import { Button, IconButton, NumberInput, PageHeader, Segmented, Spinner, TextInput, useToast } from "../../ui";
-import { MAX_NAME_LENGTH, MAX_PLAYERS, useGameStore } from "./store";
+import { MAX_NAME_LENGTH, MAX_PLAYERS, useGameStore, withVariants } from "./store";
 import { SeatList } from "./SeatList";
+import { RulesetPicker } from "./GamePicker";
+import { useGameCatalog, useSelectedGame } from "../../lib/games";
 import { LinkAccountDialog, findAccountByName } from "./LinkAccountDialog";
 import styles from "./SetupPage.module.css";
 
@@ -38,8 +39,18 @@ export function SetupPage() {
   const toast = useToast();
   const { user } = useAuth();
   const draft = useGameStore((s) => s.setupDraft);
-  const { addDraftPlayer, removeDraftPlayer, reorderDraft, setDraftDeck, setDraftMaxCards, startMatch } = useGameStore.getState();
+  const { addDraftPlayer, removeDraftPlayer, reorderDraft, setDraftDeck, setDraftMaxCards, setDraftVariants, setDraftGame, setDraftRuleset, startMatch } =
+    useGameStore.getState();
+  // The game is chosen on the start page.
+  const selectedGame = useSelectedGame();
+  useEffect(() => {
+    if (draft.gameId !== selectedGame) setDraftGame(selectedGame);
+  }, [draft.gameId, selectedGame, setDraftGame]);
   const known = useLocalHistory((s) => s.knownPlayers);
+  const catalog = useGameCatalog();
+  const gameRulesets = catalog.rulesetsOf(draft.gameId);
+  // a deleted/unknown custom ruleset falls back to the game's default
+  const ruleset = catalog.ruleset(draft.rulesetId) ?? gameRulesets.find((r) => r.id === defaultRuleset(draft.gameId).id);
 
   const [tab, setTab] = useState<Tab>("known");
   const [guestName, setGuestName] = useState("");
@@ -51,9 +62,19 @@ export function SetupPage() {
   const debouncedSearch = useDebounced(search.trim(), 300);
 
   const n = draft.players.length;
-  const allowed = maxAllowedCards(draft.deckSize, Math.max(n, 2));
-  const rounds = totalRounds(peakCards({ deckSize: draft.deckSize, maxCards: draft.maxCards, playerCount: Math.max(n, 2) }));
+  const limits = ruleset?.rules.players ?? { min: 2, max: MAX_PLAYERS };
+  const playedRuleset = ruleset && withVariants(ruleset, draft);
+  const trickRules = playedRuleset?.kind === "trick-bidding" ? playedRuleset.rules : null;
+  const sheetRules = ruleset?.kind === "score-sheet" ? ruleset.rules : null;
+  const planPlayers = Math.max(n, limits.min, 1);
+  const allowed = trickRules ? maxAllowedCards(draft.deckSize, planPlayers) : 0;
+  const rounds = trickRules
+    ? roundPlan(trickRules, { deckSize: draft.deckSize, maxCards: draft.maxCards, playerCount: planPlayers }).length
+    : sheetRules
+      ? sheetCategories(sheetRules).length * sheetRules.columns.length
+      : 0;
   const full = n >= MAX_PLAYERS;
+  const tooMany = n > limits.max;
 
   const isAdded = (p: { name: string; userId: string | null }) =>
     draft.players.some((d) => d.name.toLowerCase() === p.name.toLowerCase() || (p.userId !== null && d.userId === p.userId));
@@ -113,7 +134,7 @@ export function SetupPage() {
   });
 
   const start = () => {
-    const err = startMatch();
+    const err = startMatch(ruleset);
     if (err) toast.show(err, { tone: "error" });
     else navigate("/game");
   };
@@ -132,6 +153,7 @@ export function SetupPage() {
     <>
       <PageHeader title="Neues Spiel" back="/" />
       <main className={styles.page}>
+        <RulesetPicker game={catalog.game(draft.gameId)} rulesets={gameRulesets} ruleset={ruleset} onRuleset={setDraftRuleset} />
         <div className={styles.cols}>
           <section className={styles.panel} aria-labelledby="add-title">
             <h2 id="add-title" className={styles.h2}>
@@ -233,7 +255,10 @@ export function SetupPage() {
               Sitzordnung <span className={styles.count}>{n} / {MAX_PLAYERS}</span>
             </h2>
             {n === 0 ? (
-              <p className={styles.hint}>Füge mindestens zwei Spieler hinzu. Die Reihenfolge ist die Sitzordnung, der erste Spieler gibt zuerst.</p>
+              <p className={styles.hint}>
+                Füge {limits.min === 1 ? "einen oder mehr" : `mindestens ${limits.min}`} Spieler hinzu. Die Reihenfolge ist die Sitzordnung
+                {trickRules ? ", der erste Spieler gibt zuerst." : ", der erste Spieler beginnt."}
+              </p>
             ) : (
               <div className={styles.seatScroll}>
                 <SeatList players={draft.players} onReorder={reorderDraft} onRemove={removeDraftPlayer} onLink={setLinking} />
@@ -243,36 +268,69 @@ export function SetupPage() {
         </div>
 
         <section className={styles.options} aria-label="Spieloptionen">
-          <div className={styles.option}>
-            <span className={styles.optLabel}>Kartendeck</span>
-            <Segmented
-              ariaLabel="Deckgröße"
-              value={draft.deckSize}
-              onChange={(v: DeckSize) => setDraftDeck(v)}
-              options={DECK_SIZES.map((d) => ({ value: d, label: String(d) }))}
-            />
-          </div>
-          <div className={styles.option}>
-            <span className={styles.optLabel}>Max. Karten</span>
-            <NumberInput
-              label="Max. Karten"
-              value={draft.maxCards}
-              placeholder={String(allowed)}
-              min={1}
-              max={allowed}
-              onChange={(v) => setDraftMaxCards(v)}
-            />
-          </div>
+          {trickRules && trickRules.deck.sizes.length > 1 && (
+            <div className={styles.option}>
+              <span className={styles.optLabel}>Kartendeck</span>
+              <Segmented
+                ariaLabel="Deckgröße"
+                value={draft.deckSize}
+                onChange={(v: number) => setDraftDeck(v)}
+                options={trickRules.deck.sizes.map((d) => ({ value: d, label: String(d) }))}
+              />
+            </div>
+          )}
+          {trickRules?.rounds.allowMaxCards && trickRules.rounds.schedule !== "fixed" && (
+            <div className={styles.option}>
+              <span className={styles.optLabel}>Max. Karten</span>
+              <NumberInput
+                label="Max. Karten"
+                value={draft.maxCards}
+                placeholder={String(allowed)}
+                min={1}
+                max={allowed}
+                onChange={(v) => setDraftMaxCards(v)}
+              />
+            </div>
+          )}
+          {trickRules && trickRules.rounds.schedule !== "fixed" && (
+            <div className={styles.option}>
+              <span className={styles.optLabel}>Höchstzahl</span>
+              <Segmented
+                ariaLabel="Runden mit der Höchstzahl an Karten"
+                value={draft.repeatPeak ? 2 : 1}
+                onChange={(v: number) => setDraftVariants({ repeatPeak: v === 2 })}
+                options={[
+                  { value: 1, label: "1×", tooltip: "Die Runde mit den meisten Karten wird einmal gespielt." },
+                  { value: 2, label: "2×", tooltip: "Die Runde mit den meisten Karten wird zweimal hintereinander gespielt." },
+                ]}
+              />
+            </div>
+          )}
+          {trickRules && (
+            <div className={styles.option}>
+              <span className={styles.optLabel}>Erste Ansage</span>
+              <Segmented
+                ariaLabel="Erste Ansage"
+                value={draft.firstBidder}
+                onChange={(firstBidder) => setDraftVariants({ firstBidder })}
+                options={[
+                  { value: "giver", label: "Geber", tooltip: "Der Geber sagt zuerst an." },
+                  { value: "afterGiver", label: "Nach Geber", tooltip: "Der Spieler nach dem Geber sagt zuerst an." },
+                ]}
+              />
+            </div>
+          )}
           <div className={styles.rounds} aria-live="polite">
-            <strong>{rounds}</strong> Runden
+            <strong>{rounds}</strong> {sheetRules ? "Felder pro Spieler" : "Runden"}
           </div>
         </section>
 
         <div className={styles.startWrap}>
-          <button type="button" className={styles.start} disabled={n < 2} onClick={start}>
+          <button type="button" className={styles.start} disabled={n < limits.min || tooMany || !ruleset} onClick={start}>
             Spiel starten
           </button>
-          {n < 2 && <p className={styles.hint}>Mindestens 2 Spieler nötig.</p>}
+          {n < limits.min && <p className={styles.hint}>Mindestens {limits.min} Spieler nötig.</p>}
+          {tooMany && <p className={styles.hint}>Höchstens {limits.max} Spieler bei diesem Regelwerk.</p>}
         </div>
       </main>
       <LinkAccountDialog

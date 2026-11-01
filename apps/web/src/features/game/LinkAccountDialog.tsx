@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { userLabel, type MatchPlayer, type UserDto } from "@scheisse/shared";
+import { userLabel, type MatchPlayer, type UserDto } from "@gamenight/shared";
 import { apiGet, errorMessage } from "../../lib/api";
 import { Button, Modal, Spinner, TextInput } from "../../ui";
 import { MAX_NAME_LENGTH, type AccountRef } from "./store";

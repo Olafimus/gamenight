@@ -5,7 +5,7 @@ import {
   type CreateMatchResponse,
   type MatchDto,
   type MatchState,
-} from "@scheisse/shared";
+} from "@gamenight/shared";
 import { ApiRequestError, apiPost, apiPut } from "../../lib/api";
 import { useLocalHistory, type LocalMatchRecord } from "../../lib/localHistory";
 import { useGameStore } from "./store";
@@ -38,6 +38,7 @@ export function syncLocalHistory(): void {
   const existing = history.playedMatches.find((m) => ids.includes(m.matchId));
   const record: LocalMatchRecord = {
     matchId: id,
+    gameId: s.state.gameId,
     code: s.code ?? "",
     startedAt: s.startedAt ?? new Date().toISOString(),
     finishedAt: existing?.finishedAt ?? new Date().toISOString(),

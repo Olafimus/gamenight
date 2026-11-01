@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commitRound, createMatchState, setBid, setCorrect } from "@scheisse/shared";
+import { commitRound, createMatchState, setBid, setCorrect } from "@gamenight/shared";
 import { CLOSED_HOLD_MS, buildWatchRows, liveRound, roundPhase } from "./watchTable";
 
 const setup = {

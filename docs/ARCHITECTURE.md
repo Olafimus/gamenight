@@ -3,21 +3,22 @@
 Monorepo (npm workspaces), Node 22, TypeScript strict überall.
 
 ```
-packages/shared   @scheisse/shared   Typen, zod-API-Vertrag, Engine, Statistik (TS-Quellen direkt exportiert, kein Build)
-apps/server       @scheisse/server   Express + PostgreSQL (pg + drizzle-orm), Port 3001
-apps/web          @scheisse/web      Vite + React 18, Port 5173, Proxy /api -> http://localhost:3001
+packages/shared   @gamenight/shared   Spiele, Spieltypen, Regelwerke, Engines, zod-API-Vertrag, Statistik (TS-Quellen direkt exportiert, kein Build)
+apps/server       @gamenight/server   Express + PostgreSQL (pg + drizzle-orm), Port 3001
+apps/web          @gamenight/web      Vite + React 18, Port 5173, Proxy /api -> http://localhost:3001
 docker-compose.yml                   Postgres 18 auf localhost:5433 (DBs: scheisse, scheisse_test)
 ```
 
 ## Verbindlicher Vertrag
-- `packages/shared/src/types.ts`, `api.ts`, Signaturen in `engine.ts` / `stats.ts` – **nicht ändern** ohne Rücksprache mit dem Koordinator. Implementierungen dürfen ergänzt werden (Hilfsfunktionen intern, nicht exportiert).
-- Specs: `docs/spec-game.md`, `docs/spec-stats.md`, `docs/spec-ui.md`.
+- `packages/shared/src/match.ts`, `api.ts`, `kinds/*/{rules,types}.ts`, Signaturen in `kinds/*/engine.ts` / `stats.ts` – **nicht ändern** ohne Rücksprache mit dem Koordinator. Implementierungen dürfen ergänzt werden (Hilfsfunktionen intern, nicht exportiert).
+- Specs: `docs/spec-games.md` (Datenmodell Spiele/Regelwerke), `docs/spec-game.md` (Scheisse), `docs/spec-stats.md`, `docs/spec-ui.md`.
 
 ## Server (`apps/server`)
-- `src/index.ts` (listen), `src/app.ts` (`createApp(deps)` – für Supertest ohne listen), `src/db/schema.ts` (drizzle), `drizzle/` (generierte SQL-Migrationen), `src/db/migrate.ts`, `src/routes/{auth,users,matches,stats}.ts`, `src/sse/hub.ts`, `src/jobs/cleanup.ts`, `src/env.ts`.
+- `src/index.ts` (listen), `src/app.ts` (`createApp(deps)` – für Supertest ohne listen), `src/db/schema.ts` (drizzle), `drizzle/` (generierte SQL-Migrationen), `src/db/migrate.ts`, `src/routes/{auth,users,matches,stats,rulesets}.ts`, `src/sse/hub.ts`, `src/jobs/cleanup.ts`, `src/env.ts`.
 - Tabellen:
   - `users(id uuid pk default gen_random_uuid(), username text, username_lower text unique, password_hash text, created_at timestamptz)`
-  - `matches(id uuid pk, code text unique, owner_user_id uuid null fk users, write_token_hash text, state jsonb, finished boolean, started_at, finished_at null, updated_at, version int)`
+  - `rulesets(id uuid pk, owner_user_id fk users cascade, game_id text, kind text, name text, description text, rules jsonb, created_at, updated_at)` – eigene Regelwerke
+  - `matches(id uuid pk, code text unique, owner_user_id uuid null fk users, write_token_hash text, game_id text, ruleset_id text, state jsonb, finished boolean, started_at, finished_at null, updated_at, version int)`
   - `match_players(match_id fk cascade, player_id text, seat int, name text, user_id uuid null fk users; pk(match_id, player_id))` – bei jedem PUT neu geschrieben (für Suche nach Spielername)
   - `match_results(match_id fk cascade, player_id text, user_id uuid null, name text, final_score int, placement int, player_count int, rounds int, avg_score double, rating double; pk(match_id, player_id))`
 - Passwörter: bcryptjs (cost 10). Session: JWT (jsonwebtoken, HS256, `JWT_SECRET`) im httpOnly-Cookie `session`, SameSite=Lax, 30 Tage.

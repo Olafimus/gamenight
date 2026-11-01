@@ -2,8 +2,8 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { setBid } from "@scheisse/shared";
-import { createMatch, setupTestApp, stateFor } from "./helpers";
+import { setBid } from "@gamenight/shared";
+import { asTrick, createMatch, setupTestApp, stateFor } from "./helpers";
 
 const t = setupTestApp();
 let server: http.Server;
@@ -88,7 +88,7 @@ describe("SSE", () => {
     const r = await request(t.app)
       .put(`/api/matches/${match.id}`)
       .set("X-Write-Token", writeToken)
-      .send({ state: setBid(match.state, "a", 1), version: 1 });
+      .send({ state: setBid(asTrick(match.state), "a", 1), version: 1 });
     expect(r.status).toBe(200);
     const evs = await s.waitFor((e) => e.length >= 2);
     expect(evs[1]!.event).toBe("match");

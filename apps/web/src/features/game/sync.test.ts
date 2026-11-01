@@ -21,7 +21,7 @@ beforeEach(() => {
   useLocalHistory.setState({ knownPlayers: [], playedMatches: [] });
   useGameStore.setState({
     state: null, matchId: null, localId: null, code: null, writeToken: null, version: 1, startedAt: null,
-    dirty: false, setupDraft: { players: [], deckSize: 32, maxCards: null }, syncStatus: "idle",
+    dirty: false, setupDraft: { players: [], gameId: "scheisse", rulesetId: "scheisse.standard", deckSize: 32, maxCards: null, repeatPeak: false, firstBidder: "giver" }, syncStatus: "idle",
   });
 });
 afterEach(() => vi.useRealTimers());

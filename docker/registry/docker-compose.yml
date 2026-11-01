@@ -22,7 +22,7 @@ services:
       - "5001:80"
     environment:
       SINGLE_REGISTRY: "true"
-      REGISTRY_TITLE: Scheisse LAN Registry
+      REGISTRY_TITLE: Gamenight LAN Registry
       DELETE_IMAGES: "true"
       NGINX_PROXY_PASS_URL: http://registry:5000
       SHOW_CONTENT_DIGEST: "true"

@@ -36,6 +36,7 @@
 }
 .bannerText { font-weight: 700; font-size: 0.95rem; }
 .bannerText small { display: block; font-weight: 400; opacity: 0.85; }
+.games { width: 100%; max-width: 44rem; margin: 0 auto 0.9rem; }
 .tiles { flex: 1; display: grid; grid-template-columns: 1fr; gap: 0.7rem; grid-auto-rows: minmax(6.5rem, 1fr); }
 .tileWrap { display: flex; min-height: 0; }
 .tileWrap > a { flex: 1; }

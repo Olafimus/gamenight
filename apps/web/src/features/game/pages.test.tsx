@@ -7,8 +7,8 @@ import { useGameStore } from "./store";
 import { PlayPage } from "./PlayPage";
 import { SetupPage } from "./SetupPage";
 import { CeremonyPage } from "./CeremonyPage";
-import { StatsPage } from "./StatsPage";
-import { ScoreboardPage } from "./ScoreboardPage";
+import { TrickStatsPage as StatsPage } from "./StatsPage";
+import { TrickScoreboardPage as ScoreboardPage } from "./ScoreboardPage";
 
 vi.mock("../../lib/auth", () => ({ useAuth: () => ({ user: null, loading: false }) }));
 
@@ -26,7 +26,7 @@ const s = () => useGameStore.getState();
 beforeEach(() => {
   window.localStorage.clear();
   s().endGame();
-  useGameStore.setState({ setupDraft: { players: [], deckSize: 32, maxCards: null } });
+  useGameStore.setState({ setupDraft: { players: [], gameId: "scheisse", rulesetId: "scheisse.standard", deckSize: 32, maxCards: null, repeatPeak: false, firstBidder: "giver" } });
 });
 
 describe("setup page", () => {
@@ -60,7 +60,7 @@ describe("running game", () => {
   it("shows header info and plays a round", () => {
     begin();
     wrap(<PlayPage />);
-    expect(screen.getByText("Runde 1 von 31")).toBeInTheDocument();
+    expect(screen.getByText("Scheisse · Runde 1 von 31")).toBeInTheDocument();
     expect(screen.getByText("Geber:", { exact: false })).toBeInTheDocument();
     expect(screen.getByTestId("stiche")).toHaveTextContent("Stiche: 0 / 1");
     const next = screen.getByRole("button", { name: "Nächste Runde" });
@@ -68,7 +68,7 @@ describe("running game", () => {
     fireEvent.click(screen.getByRole("button", { name: "Alle richtig" }));
     expect(next).toBeEnabled();
     fireEvent.click(next);
-    expect(screen.getByText("Runde 2 von 31")).toBeInTheDocument();
+    expect(screen.getByText("Scheisse · Runde 2 von 31")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Letzte Runde" })).toBeEnabled();
   });
 

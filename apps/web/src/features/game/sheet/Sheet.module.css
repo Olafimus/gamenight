@@ -1,0 +1,60 @@
+.scroll {
+  overflow: auto; max-width: 100%;
+  border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface);
+  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+}
+.table { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+.table th, .table td { padding: 0.4rem 0.6rem; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--line); }
+.table thead th {
+  position: sticky; top: 0; z-index: 2; background: var(--surface-2); color: var(--cream);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); font-weight: 700;
+}
+.table thead tr + tr th { top: 2.1rem; }
+.rowHead {
+  position: sticky; left: 0; z-index: 1; background: var(--surface-2); color: var(--cream);
+  text-align: left !important; font-weight: 700; border-right: 1px solid var(--line);
+}
+thead .rowHead { z-index: 3; color: var(--text-muted); font-weight: 500; font-size: 0.85rem; }
+.playerStart { border-left: 1px solid var(--line); }
+.playerHead { max-width: 8rem; }
+.pname { display: block; overflow: hidden; text-overflow: ellipsis; }
+.turn { display: block; font-size: 0.7rem; font-weight: 700; color: var(--teal-hover); text-transform: uppercase; letter-spacing: 0.04em; }
+.colHead { font-size: 0.75rem; font-weight: 500 !important; }
+.mult { color: var(--yellow); }
+.activeHead { background: #12352f !important; }
+.activeCol { background: rgba(11, 181, 166, 0.09); }
+
+.cell { padding: 0 !important; min-width: 3.4rem; }
+.cellBtn {
+  width: 100%; min-height: 2.6rem; border: 0; background: transparent; color: var(--text);
+  font: inherit; font-weight: 700; font-size: 1.05rem; cursor: pointer; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent; transition: background-color var(--ease);
+}
+.cellBtn:hover { background: rgba(255, 255, 255, 0.06); }
+.cellBtn:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
+.open { color: rgba(255, 255, 255, 0.22); font-weight: 400; font-size: 1.2rem; }
+.activeCol .open { color: var(--teal-hover); }
+.struck { color: var(--text-muted); }
+.bonusMark { color: var(--yellow); font-size: 0.65em; margin-left: 0.15em; }
+
+.sumRow td, .sumRow th { background: rgba(255, 255, 255, 0.04); font-weight: 700; }
+.sumRow th.rowHead { background: #222; }
+.bonusRow td { font-size: 0.85rem; }
+.reached { color: var(--green); font-weight: 900; }
+.missing { color: var(--text-muted); font-size: 0.8rem; }
+.totalRow td, .totalRow th { border-bottom: 0; font-size: 1.15rem; font-weight: 900; }
+.total { padding-block: 0.6rem !important; }
+.place { font-size: 0.8rem; font-weight: 700; }
+.gold { background: var(--gold); color: #111; }
+.silver { background: var(--silver); color: #111; }
+.bronze { background: var(--bronze); color: #111; }
+
+.short { display: none; }
+@media (max-width: 599px) {
+  .table { font-size: 0.85rem; }
+  .table th, .table td { padding: 0.35rem 0.3rem; }
+  .cell { min-width: 2.6rem; }
+  .long { display: none; }
+  .short { display: inline; }
+  .playerHead { max-width: 4.8rem; }
+}

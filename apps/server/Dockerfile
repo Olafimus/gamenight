@@ -6,7 +6,7 @@ COPY packages/shared/package.json packages/shared/
 COPY apps/server/package.json apps/server/
 COPY apps/web/package.json apps/web/
 # only server (+ shared via workspace link), production deps only (tsx is a runtime dep)
-RUN npm ci --workspace @scheisse/server --include-workspace-root=false --omit=dev
+RUN npm ci --workspace @gamenight/server --include-workspace-root=false --omit=dev
 
 FROM node:22-alpine
 ENV NODE_ENV=production PORT=3001

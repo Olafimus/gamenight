@@ -3,7 +3,7 @@ import path from "node:path";
 import { sql } from "drizzle-orm";
 import request from "supertest";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { deriveMatch, type LeaderboardEntryDto, type LeaderboardResponse, type MatchState, type PlayerProfileDto } from "@scheisse/shared";
+import { deriveMatch, type LeaderboardEntryDto, type LeaderboardResponse, type TrickMatchState as MatchState, type PlayerProfileDto } from "@gamenight/shared";
 import { createMatch, playRound, playRounds, registerUser, setupTestApp, stateFor } from "./helpers";
 
 const t = setupTestApp();
@@ -179,7 +179,7 @@ describe("stats", () => {
       s = playRound(s);
     }
     // rebuild with Ben wrong in every round
-    const { setBid, setCorrect, commitRound } = await import("@scheisse/shared");
+    const { setBid, setCorrect, commitRound } = await import("@gamenight/shared");
     let w: MatchState = start;
     while (!deriveMatch(w).finished) {
       w = setBid(setBid(w, "a", 1), "b", 0);

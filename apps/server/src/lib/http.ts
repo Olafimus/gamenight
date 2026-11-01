@@ -1,6 +1,6 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { ZodError } from "zod";
-import type { ApiError } from "@scheisse/shared";
+import type { ApiError } from "@gamenight/shared";
 
 export class HttpError extends Error {
   constructor(

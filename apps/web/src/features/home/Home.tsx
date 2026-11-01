@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { userLabel } from "@scheisse/shared";
+import { userLabel } from "@gamenight/shared";
 import logoIcon from "../../assets/brand/logo-icon.png";
 import cards from "../../assets/cards.svg";
 import binoculars from "../../assets/binoculars2.png";
@@ -9,6 +9,10 @@ import { useAuth } from "../../lib/auth";
 import { Button, ButtonLink, FadeIn, Stagger, StaggerItem, Tile, Tooltip, motion, springs, useReducedMotion, useToast } from "../../ui";
 import { errorMessage } from "../../lib/api";
 import { useInstall } from "../../lib/pwa";
+import { GAMES, getGame } from "@gamenight/shared";
+import { useSelectedGame, useSelectedGameStore } from "../../lib/games";
+import { GameTiles } from "../game/GamePicker";
+import { useGameStore } from "../game/store";
 import { hasRunningMatch } from "./useRunningMatch";
 import styles from "./Home.module.css";
 
@@ -19,6 +23,12 @@ export function Home() {
   const running = useMemo(() => hasRunningMatch(), []);
   const install = useInstall();
   const reduce = useReducedMotion();
+  const gameId = useSelectedGame();
+  const game = getGame(gameId);
+  const chooseGame = (id: string) => {
+    useSelectedGameStore.getState().select(id);
+    useGameStore.getState().setDraftGame(id);
+  };
 
   return (
     <div className={styles.shell}>
@@ -59,12 +69,12 @@ export function Home() {
           <img src={logoIcon} alt="" className={styles.icon} width={96} height={96} />
         </motion.div>
         <FadeIn delay={0.25} y={12}>
-          <h1 className={styles.wordmark}>Scheisse</h1>
+          <h1 className={styles.wordmark}>Gamenight</h1>
         </FadeIn>
         <FadeIn delay={0.4} y={6} className={styles.subline}>
           <span className={styles.rule} aria-hidden="true" />
           <span className={styles.diamond} aria-hidden="true">◆</span>
-          <span className={styles.sub}>Kartenspiel</span>
+          <span className={styles.sub}>{game?.name ?? "Spieleabend"}</span>
           <span className={styles.diamond} aria-hidden="true">◆</span>
           <span className={styles.rule} aria-hidden="true" />
         </FadeIn>
@@ -82,26 +92,30 @@ export function Home() {
         </div>
       )}
 
+      <FadeIn delay={0.4} y={8} className={styles.games}>
+        <GameTiles games={GAMES} gameId={gameId} onGame={chooseGame} />
+      </FadeIn>
+
       <Stagger as="nav" delay={0.45} gap={0.09} className={styles.tiles} aria-label="Hauptmenü">
         <StaggerItem y={24} className={styles.tileWrap}>
-          <Tile to="/game" tooltip="Punkte zählen: Spieler wählen, Ansagen eintragen, Runde für Runde." title="Spielen" description="Neues Match starten und Punkte zählen" image={cards} contain />
+          <Tile to="/game" tooltip="Punkte zählen: Spieler wählen, Ansagen eintragen, Runde für Runde." title="Spielen" description={`Neues Match ${game?.name ?? ""} starten und Punkte zählen`} image={cards} contain />
         </StaggerItem>
         <StaggerItem y={24} className={styles.tileWrap}>
           <Tile to="/watch" tooltip="Mit dem Match-Code live zusehen, ohne mitzuspielen." title="Zuschauen" description="Ein laufendes Match live verfolgen" image={binoculars} />
         </StaggerItem>
         <StaggerItem y={24} className={styles.tileWrap}>
-          <Tile to="/stats" tooltip="Bestenliste und Auswertungen aller gespielten Matches." title="Statistiken" description="Bestenliste, Matches und mehr" image={statistic} contain />
+          <Tile to="/stats" tooltip="Bestenliste und Auswertungen aller gespielten Matches." title="Statistiken" description={`Bestenliste und Matches – ${game?.name ?? ""}`} image={statistic} contain />
         </StaggerItem>
       </Stagger>
       {install.kind === "prompt" && (
         <div className={styles.install}>
-          <Button variant="ghost" size="sm" tooltip="Scheisse wie eine App auf dem Gerät installieren – auch offline nutzbar." onClick={() => void install.install()}>
+          <Button variant="ghost" size="sm" tooltip="Gamenight wie eine App auf dem Gerät installieren – auch offline nutzbar." onClick={() => void install.install()}>
             App installieren
           </Button>
         </div>
       )}
       {install.kind === "ios" && (
-        <Tooltip content="Im Safari-Teilen-Menü „Zum Home-Bildschirm“ wählen, dann startet Scheisse wie eine App.">
+        <Tooltip content="Im Safari-Teilen-Menü „Zum Home-Bildschirm“ wählen, dann startet Gamenight wie eine App.">
           <p className={styles.iosHint} tabIndex={0}>
             App installieren: Teilen → Zum Home-Bildschirm
           </p>

@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { IoArrowDown, IoArrowUp, IoClose, IoLink, IoReorderTwo, IoUnlink } from "react-icons/io5";
-import type { MatchPlayer } from "@scheisse/shared";
+import type { MatchPlayer } from "@gamenight/shared";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { IconButton, cx } from "../../ui";
 import styles from "./SeatList.module.css";

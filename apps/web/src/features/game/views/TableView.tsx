@@ -4,7 +4,7 @@ import { MdOutlineRotateRight } from "react-icons/md";
 import { cx, Tooltip } from "../../../ui";
 import { useGameStore } from "../store";
 import { AnimatedNumber, DeltaFloat } from "./AnimatedNumber";
-import { BidStepper, MarkToggle } from "./controls";
+import { BidStepper, ResultControl, currentHit } from "./controls";
 import { CompactView } from "./CompactView";
 import { RankBadge, useLeaderChange } from "./RankBadge";
 import { fitSeats, seatDirections, type SeatLayout } from "./tableLayout";
@@ -140,7 +140,7 @@ export function TableView(props: ViewProps) {
         const dir = layout.dirs[pos] ?? { cx: 0, cy: 1 };
         const style = { "--cx": dir.cx.toFixed(4), "--cy": dir.cy.toFixed(4) } as CSSProperties;
         const isGiver = p.id === match.giverId;
-        const correct = state.current.correct[p.id];
+        const correct = currentHit(state, p.id);
         const leads = p.placement === 1;
         return (
           <article
@@ -177,7 +177,7 @@ export function TableView(props: ViewProps) {
               <BidStepper name={p.name} value={state.current.bids[p.id] ?? 0} max={match.cardsThisRound} disabled={match.finished} onChange={(v) => actions.setBid(p.id, v)} />
             </div>
             <div className={styles.ctl}>
-              <MarkToggle name={p.name} value={correct} disabled={match.finished} onChange={(v) => actions.setCorrect(p.id, v)} />
+              <ResultControl state={state} player={p} max={match.cardsThisRound} disabled={match.finished} actions={actions} />
             </div>
           </article>
         );

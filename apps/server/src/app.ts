@@ -5,6 +5,7 @@ import type { Env } from "./env";
 import { errorHandler, HttpError } from "./lib/http";
 import { authRouter, sessionMiddleware } from "./routes/auth";
 import { matchesRouter } from "./routes/matches";
+import { gamesRouter, rulesetsRouter } from "./routes/rulesets";
 import { statsRouter } from "./routes/stats";
 import { playersRouter, usersRouter } from "./routes/users";
 import { StatsCache } from "./stats/cache";
@@ -41,6 +42,8 @@ export function createApp(deps: AppDeps): { app: Express; hub: Hub; stats: Stats
   app.use("/api/players", playersRouter(ctx));
   app.use("/api/matches", matchesRouter(ctx));
   app.use("/api/stats", statsRouter(ctx));
+  app.use("/api/games", gamesRouter(ctx));
+  app.use("/api/rulesets", rulesetsRouter(ctx));
 
   app.use("/api", (_req, _res, next) => next(new HttpError(404, "not_found", "Not found")));
   app.use(errorHandler);

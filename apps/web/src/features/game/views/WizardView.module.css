@@ -92,3 +92,21 @@
 }
 
 .phase { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+/* tablet and wider: assistant + round table side by side */
+.layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(16rem, 1fr); height: 100%; min-height: 0; }
+.layout .wiz { max-width: none; border-right: 1px solid var(--line); }
+.side { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.6rem 0.75rem; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.sideTable { width: 100%; border-collapse: separate; border-spacing: 0 0.3rem; font-variant-numeric: tabular-nums; }
+.sideTable th { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-align: left; padding: 0 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.sideTable td { padding: 0.55rem 0.5rem; background: var(--surface); border-top: 2px solid var(--line); border-bottom: 2px solid var(--line); }
+.sideTable td:first-child { border-left: 2px solid var(--line); border-radius: var(--radius-md) 0 0 var(--radius-md); font-weight: 900; color: var(--text-muted); }
+.sideTable td:last-child { border-right: 2px solid var(--line); border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+.sideTable tfoot td { background: none; border: 0; color: var(--text-muted); font-size: 0.9rem; }
+.sideTable tbody td:nth-child(3) { font-weight: 900; font-size: 1.15rem; }
+.sideTable .sideNum { text-align: right; }
+.sideName { font-weight: 900; max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sideGiver { display: inline-block; margin-left: 0.4rem; padding: 0 0.4rem; border-radius: var(--radius-pill); background: var(--dealer); color: var(--dealer-ink); font-size: 0.65rem; vertical-align: middle; }
+.sideActive td { background: #0a3a52; border-color: var(--cyan); }
+.sideActive td:first-child { color: var(--cyan); }
+.sideSumBad { color: #ff9a9a; }

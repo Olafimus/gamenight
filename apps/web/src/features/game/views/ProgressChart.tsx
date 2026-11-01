@@ -1,4 +1,4 @@
-import type { DerivedPlayer } from "@scheisse/shared";
+import type { TrickDerivedPlayer as DerivedPlayer } from "@gamenight/shared";
 import styles from "./SplitView.module.css";
 
 /** Colour-blind friendly (Okabe-Ito based) series colours that read on the dark background. */

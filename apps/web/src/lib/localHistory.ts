@@ -8,6 +8,8 @@ export interface KnownPlayer {
 
 export interface LocalMatchRecord {
   matchId: string;
+  /** missing in records of app version 1 (= Scheisse) */
+  gameId?: string;
   code: string;
   startedAt: string;
   finishedAt: string;

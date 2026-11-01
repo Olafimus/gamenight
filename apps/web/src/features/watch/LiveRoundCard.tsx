@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import type { MatchDto } from "@scheisse/shared";
+import type { MatchDtoOf, TrickMatchState } from "@gamenight/shared";
+
+type MatchDto = MatchDtoOf<TrickMatchState>;
 import { AnimatePresence, cx, motion, useReducedMotion } from "../../ui";
 import { CLOSED_HOLD_MS, liveRound, roundPhase, type RoundPhase } from "./watchTable";
 import styles from "./LiveRoundCard.module.css";

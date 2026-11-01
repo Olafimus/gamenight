@@ -25,10 +25,10 @@ export function PageHeader({ title, back, actions }: PageHeaderProps) {
         </IconButton>
       ) : null}
       <Tooltip content="Zur Startseite" side="bottom">
-        <Link to="/" className={styles.logo} aria-label="Scheisse – zur Startseite">
+        <Link to="/" className={styles.logo} aria-label="Gamenight – zur Startseite">
           <img src={logo} alt="" />
           <span className={styles.wordmark} aria-hidden="true">
-            Scheisse
+            Gamenight
           </span>
         </Link>
       </Tooltip>

@@ -12,9 +12,9 @@ export default defineConfig({
       includeAssets: ["favicon.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "icon-maskable-512.png"],
       manifest: {
         id: "/",
-        name: "Scheisse",
-        short_name: "Scheisse",
-        description: "Punktezähler für das Kartenspiel Scheisse",
+        name: "Gamenight",
+        short_name: "Gamenight",
+        description: "Punktezähler für Spieleabende: Scheisse, Wizard, Kniffel & mehr",
         lang: "de",
         start_url: "/",
         scope: "/",
