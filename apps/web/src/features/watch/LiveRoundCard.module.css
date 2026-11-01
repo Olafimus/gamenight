@@ -1,0 +1,35 @@
+.card { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 0.7rem 0.8rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.title { font-weight: 900; color: var(--cream); }
+.sub { font-size: 0.85rem; color: var(--text-muted); }
+.phase {
+  display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.7rem; border-radius: var(--radius-pill);
+  font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.closed { background: rgba(37, 211, 102, 0.16); color: var(--green); }
+.bidding { background: rgba(255, 214, 10, 0.14); color: var(--yellow); }
+.marking { background: rgba(2, 175, 240, 0.16); color: var(--cyan); }
+.finished { background: rgba(226, 184, 76, 0.18); color: var(--brand-gold); }
+.spinner { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: currentColor; animation: blink 1.2s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+
+.rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.35rem; }
+.row {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.6rem; border-radius: var(--radius-sm);
+  background: var(--surface); border: 1px solid transparent; transition: background-color var(--ease);
+}
+.ok { background: rgba(0, 92, 75, 0.55); border-color: rgba(37, 211, 102, 0.35); }
+.bad { background: rgba(155, 0, 0, 0.45); border-color: rgba(255, 49, 49, 0.35); }
+.name { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 0.3rem; }
+.giver {
+  flex: none; width: 1.1rem; height: 1.1rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--dealer); color: var(--dealer-ink); font-size: 0.65rem; font-weight: 900;
+}
+.bid { min-width: 1.6rem; text-align: center; font-size: 1.3rem; font-weight: 900; font-variant-numeric: tabular-nums; display: inline-block; }
+.empty { color: var(--text-muted); font-weight: 400; }
+.mark { width: 1rem; text-align: center; font-weight: 900; }
+.points { font-size: 0.85rem; font-weight: 900; color: var(--green); min-width: 2.2rem; text-align: right; }
+.neg { color: #ff7a7a; }
+.sum { font-size: 0.85rem; font-weight: 700; align-self: flex-end; padding: 0.1rem 0.6rem; border-radius: var(--radius-pill); background: rgba(0, 0, 0, 0.35); }
+.sumOk { color: var(--green); }
+.sumBad { color: #ff7a7a; }

@@ -1,0 +1,31 @@
+# Optionale LAN-Registry:  docker compose -f docker/registry/docker-compose.yml up -d
+services:
+  registry:
+    image: registry:2
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin: '[http://localhost:5001]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods: '[HEAD,GET,OPTIONS,DELETE]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers: '[Authorization,Accept,Cache-Control]'
+      REGISTRY_HTTP_HEADERS_Access-Control-Expose-Headers: '[Docker-Content-Digest]'
+    volumes:
+      - registry-data:/var/lib/registry
+
+  ui:
+    image: joxit/docker-registry-ui:latest
+    restart: unless-stopped
+    depends_on: [registry]
+    ports:
+      - "5001:80"
+    environment:
+      SINGLE_REGISTRY: "true"
+      REGISTRY_TITLE: Scheisse LAN Registry
+      DELETE_IMAGES: "true"
+      NGINX_PROXY_PASS_URL: http://registry:5000
+      SHOW_CONTENT_DIGEST: "true"
+
+volumes:
+  registry-data:

@@ -1,0 +1,22 @@
+.page { min-height: calc(100dvh - 3.25rem); display: grid; place-items: start center; padding: 1.25rem max(1rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
+.card {
+  width: 100%; max-width: 26rem; padding: 1.25rem; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow);
+}
+.form { display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.8rem; }
+.title { font-family: var(--font-display); font-style: italic; font-size: 1.6rem; color: var(--brand-gold); }
+.note { margin: 0.5rem 0 0; color: var(--text-muted); font-size: 0.9rem; }
+.error { padding: 0.7rem 1rem; border-radius: var(--radius-md); background: rgba(255, 49, 49, 0.15); border: 1px solid var(--red); color: #ffb4b4; }
+.switch { margin-top: 0.75rem; text-align: center; font-size: 0.95rem; }
+@media (max-width: 599px) {
+  .page { padding-top: 1rem; }
+  .card { padding: 1.25rem 1rem; }
+}
+@media (min-width: 768px) {
+  .page { place-items: center; }
+  .card { max-width: 28rem; padding: 1.5rem; }
+}
+.switch a { display: inline-block; padding: 0.7rem 0.3rem; }
+.stack { width: 100%; max-width: 28rem; display: flex; flex-direction: column; gap: 1rem; }
+.stack .card { max-width: none; }
+.subtitle { font-size: 1.1rem; color: var(--cream); }

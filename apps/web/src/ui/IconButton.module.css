@@ -1,0 +1,19 @@
+.icon {
+  touch-action: manipulation; -webkit-user-select: none; user-select: none;
+  display: inline-grid; place-items: center;
+  width: 2.5rem; height: 2.5rem; padding: 0;
+  border: 2px solid transparent; border-radius: 50%;
+  background: transparent; color: var(--text); font-size: 1.4rem; line-height: 1;
+  transition: background-color var(--ease), color var(--ease), transform 0.16s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+@media (hover: hover) {
+  .icon:hover:not(:disabled) { background: var(--cream); color: #000; }
+  .danger:hover:not(:disabled) { background: var(--red); color: #fff; }
+}
+.icon:active:not(:disabled) { background: var(--cream); color: #000; }
+.icon:active:not(:disabled) { transform: scale(0.9); }
+.icon:disabled { opacity: 0.35; cursor: not-allowed; }
+.sm { width: 2.5rem; height: 2.5rem; font-size: 1.1rem; }
+.lg { width: 3.25rem; height: 3.25rem; font-size: 1.7rem; }
+.solid { background: var(--iris); }
+.danger { color: var(--red); }

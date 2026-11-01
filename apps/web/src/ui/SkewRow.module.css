@@ -1,0 +1,25 @@
+/*
+ * The slanted background is a clipped pseudo-element instead of skewX() on the row: a skew sticks out by
+ * height * tan(angle) and made tall rows (e.g. expanded leaderboard details) overflow the page sideways.
+ * The slant is a fixed inset, so the row always stays inside its box and the content is not sheared.
+ */
+.row {
+  --row-bg: var(--surface); --slant: 0.7rem;
+  position: relative; isolation: isolate; display: block; margin: 0 0.6rem 0.5rem; padding: 0.5rem 1.25rem;
+}
+.row::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; background: var(--row-bg);
+  clip-path: polygon(var(--slant) 0, 100% 0, calc(100% - var(--slant)) 100%, 0 100%);
+  transition: background-color var(--ease);
+}
+.right { --slant: 0.4rem; }
+.right::before { clip-path: polygon(0 0, calc(100% - var(--slant)) 0, 100% 100%, var(--slant) 100%); }
+.inner { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+.alt { --row-bg: var(--row-alt); }
+.gold { --row-bg: linear-gradient(90deg, #ffb003, #ffcb03); color: #1a1200; }
+.green { --row-bg: linear-gradient(90deg, #39b385, #9be15d); color: #07210f; }
+.teal { --row-bg: var(--teal); }
+.interactive { cursor: pointer; }
+@media (hover: hover) { .interactive:hover { --row-bg: var(--teal-hover); color: #000; } }
+.interactive:active { --row-bg: var(--teal-hover); color: #000; }
+.interactive { touch-action: manipulation; min-height: 2.75rem; }

@@ -1,0 +1,27 @@
+.tip {
+  position: fixed; z-index: 1000; max-width: min(260px, calc(100vw - 16px)); width: max-content;
+  padding: 0.45rem 0.7rem; border-radius: var(--radius-sm);
+  background: #0b0b0b; color: var(--cream); border: 1px solid var(--line);
+  font-size: 0.85rem; line-height: 1.35; font-weight: 500; text-align: left;
+  box-shadow: var(--shadow); pointer-events: none; opacity: 0; overflow-wrap: anywhere;
+}
+.visible { opacity: 1; animation: tipIn 0.15s ease-out; }
+@keyframes tipIn { from { opacity: 0; scale: 0.94; } to { opacity: 1; scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .visible { animation: none; } }
+.arrow {
+  position: absolute; width: 8px; height: 8px; background: #0b0b0b;
+  border: 1px solid var(--line); transform: rotate(45deg);
+}
+.tip[data-side="top"] .arrow { left: var(--arrow); bottom: -5px; margin-left: -4px; border-top: 0; border-left: 0; }
+.tip[data-side="bottom"] .arrow { left: var(--arrow); top: -5px; margin-left: -4px; border-bottom: 0; border-right: 0; }
+.tip[data-side="left"] .arrow { top: var(--arrow); right: -5px; margin-top: -4px; border-bottom: 0; border-left: 0; }
+.tip[data-side="right"] .arrow { top: var(--arrow); left: -5px; margin-top: -4px; border-top: 0; border-right: 0; }
+
+.info {
+  touch-action: manipulation; display: inline-grid; place-items: center; vertical-align: middle;
+  box-sizing: content-box; width: 1.1rem; height: 1.1rem; padding: 0.7rem; margin: -0.7rem -0.4rem;
+  border: 0; background: transparent; color: var(--text-muted); font-size: 1.1rem; line-height: 1;
+  border-radius: 50%; cursor: help; transition: color var(--ease);
+}
+@media (hover: hover) { .info:hover { color: var(--cream); } }
+.info:active { color: var(--cream); }

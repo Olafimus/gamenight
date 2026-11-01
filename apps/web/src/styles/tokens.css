@@ -1,0 +1,42 @@
+:root {
+  color-scheme: dark;
+  --bg: #141414;
+  --surface: #1e1e1e;
+  --surface-2: #191919;
+  --text: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.65);
+  --cream: #faebd7;
+  --teal: rgb(11, 181, 166);
+  --teal-hover: rgb(0, 220, 200);
+  --cyan: #02aff0;
+  --cyan-border: rgb(180, 220, 255);
+  --green: #25d366;
+  --green-dark: #008800;
+  --red: #ff3131;
+  --red-dark: #900603;
+  --iris: #505ac9;
+  --blue: #304ffe;
+  --magenta: #880e4f;
+  --yellow: #ffd60a;
+  /* giver/dealer: violet, so it never looks like the gold of 1st place */
+  --dealer: #c77dff;
+  --dealer-ink: #1f0033;
+  --orange: #f57c00;
+  --gold: rgb(205, 167, 0);
+  --silver: silver;
+  --bronze: #cd7f32;
+  --row-alt: rgba(0, 202, 253, 0.15);
+  --line: rgba(255, 255, 255, 0.14);
+  --radius-sm: 0.4rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-pill: 999px;
+  --brand-gold: #e2b84c;
+  --brand-gold-dark: #b8932f;
+  --brand-green: #0f3d2e;
+  --brand-green-deep: #0a2a20;
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ease: 0.25s ease;
+  --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}

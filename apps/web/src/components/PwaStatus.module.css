@@ -1,0 +1,20 @@
+.offline {
+  position: sticky; top: 0; z-index: 900;
+  padding: 0.3rem 1rem; padding-top: max(0.3rem, env(safe-area-inset-top));
+  background: var(--orange); color: #1a0d00; text-align: center; font-size: 0.8rem; font-weight: 700;
+}
+.update {
+  position: fixed; z-index: 2100; left: 50%; transform: translateX(-50%);
+  bottom: calc(1rem + env(safe-area-inset-bottom)); width: max-content; max-width: calc(100vw - 2rem);
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.5rem 0.4rem 1.1rem;
+  background: var(--surface); border: 1px solid var(--teal); border-radius: var(--radius-pill);
+  box-shadow: var(--shadow); font-weight: 500;
+}
+.reload {
+  min-height: 2.75rem; padding: 0 1.1rem; border: 0; border-radius: var(--radius-pill);
+  background: var(--green); color: #06260f; font-weight: 700; touch-action: manipulation;
+}
+.dismiss {
+  width: 2.75rem; height: 2.75rem; border: 0; border-radius: 50%; background: transparent;
+  font-size: 1.4rem; line-height: 1; touch-action: manipulation;
+}

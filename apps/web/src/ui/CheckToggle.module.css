@@ -1,0 +1,16 @@
+.group { display: inline-flex; gap: 0.5rem; }
+.btn {
+  width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 2px solid var(--line);
+  background: transparent; color: var(--text); font-size: 1.35rem; font-weight: 900; line-height: 1;
+  display: grid; place-items: center; touch-action: manipulation;
+  transition: background-color var(--ease), border-color var(--ease), transform 0.15s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.btn:active:not(:disabled) { transform: scale(0.92); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+@media (hover: hover) {
+  .yes:hover:not(:disabled) { border-color: var(--green); }
+  .no:hover:not(:disabled) { border-color: var(--red); }
+}
+.yes[aria-pressed="true"] { background: var(--green); border-color: var(--green); color: #06260f; }
+.no[aria-pressed="true"] { background: var(--red); border-color: var(--red); color: #fff; }
+.compact .btn { width: 2.5rem; height: 2.5rem; font-size: 1.15rem; }

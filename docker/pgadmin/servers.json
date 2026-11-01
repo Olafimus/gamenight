@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Scheisse (lokal)",
+      "Group": "Servers",
+      "Host": "db",
+      "Port": 5432,
+      "MaintenanceDB": "scheisse",
+      "Username": "scheisse",
+      "SSLMode": "disable",
+      "PassFile": "/var/lib/pgadmin/pgpass"
+    }
+  }
+}

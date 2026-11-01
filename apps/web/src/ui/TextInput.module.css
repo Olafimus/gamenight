@@ -1,0 +1,14 @@
+.field { display: flex; flex-direction: column; gap: 0.35rem; }
+.label { font-size: 0.9rem; font-weight: 500; color: var(--cream); }
+.input {
+  min-height: 2.75rem; font-size: max(16px, 1rem); padding: 0.6rem 1rem; border: 2px solid var(--line); border-radius: var(--radius-pill);
+  background: var(--surface); color: var(--text); font-size: 1rem;
+  transition: border-color var(--ease), background-color var(--ease);
+}
+.input::placeholder { color: rgba(255, 255, 255, 0.4); }
+.input:focus { outline: none; border-color: var(--brand-gold); background: var(--surface-2); }
+.input[aria-invalid="true"] { border-color: var(--red); }
+.hint { font-size: 0.85rem; color: var(--text-muted); }
+.error { font-size: 0.85rem; color: var(--red); font-weight: 500; }
+.labelRow { display: flex; align-items: center; gap: 0.5rem; }
+.labelRow:empty { display: none; }

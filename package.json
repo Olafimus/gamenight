@@ -1,0 +1,22 @@
+{
+  "name": "scheisse",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c cyan,magenta \"npm run dev -w @scheisse/server\" \"npm run dev -w @scheisse/web\"",
+    "build": "npm run build -w @scheisse/server && npm run build -w @scheisse/web",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:up": "docker compose up -d db",
+    "db:migrate": "npm run db:migrate -w @scheisse/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.6.3"
+  }
+}

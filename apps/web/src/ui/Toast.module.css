@@ -1,0 +1,13 @@
+.region {
+  position: fixed; z-index: 2000; left: env(safe-area-inset-left); right: env(safe-area-inset-right); bottom: max(1rem, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 0 1rem; pointer-events: none;
+}
+.toast {
+  pointer-events: auto; max-width: 28rem; width: fit-content; padding: 0.6rem 1rem;
+  background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--brand-gold);
+  border-radius: var(--radius-md); box-shadow: var(--shadow); font-weight: 500;
+}
+.success { border-left-color: var(--green); }
+.error { border-left-color: var(--red); }
+.info { border-left-color: var(--teal); }
+@media (max-width: 599px) { .toast { max-width: 100%; width: 100%; } }

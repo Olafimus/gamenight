@@ -1,0 +1,54 @@
+.scroll {
+  overflow-x: auto; max-width: 100%;
+  border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface);
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+}
+.table { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+.table th, .table td { padding: 0.55rem 0.75rem; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--line); }
+.table thead th {
+  position: sticky; top: 0; z-index: 2; background: var(--surface-2); color: var(--cream);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); font-weight: 700;
+}
+.rowHead {
+  position: sticky; left: 0; z-index: 1; background: var(--surface-2); color: var(--cream);
+  text-align: left !important; font-weight: 700; border-right: 1px solid var(--line);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+thead .rowHead { z-index: 3; }
+.cards { display: block; font-size: 0.7rem; font-weight: 400; color: var(--text-muted); }
+.cell { min-width: 5.5rem; font-weight: 500; }
+/* phones: tighter cells so typical tables (up to ~6 players) fit without sideways scrolling */
+@media (max-width: 599px) {
+  .table { letter-spacing: 0; font-size: 0.85rem; }
+  .table th, .table td { padding: 0.4rem 0.25rem; }
+  .cell { min-width: 0; }
+  .cellBtn { padding: 0.4rem 0.25rem; }
+  .playerHead { max-width: 4.5rem; }
+  .sep { margin: 0 0.15em; }
+}
+.sep { color: var(--text-muted); margin: 0 0.35em; }
+.score { font-weight: 900; }
+
+.gold { background: var(--gold); color: #111; }
+.silver { background: var(--silver); color: #111; }
+.bronze { background: var(--bronze); color: #111; }
+.gold .sep, .silver .sep, .bronze .sep { color: rgba(0, 0, 0, 0.55); }
+
+.right { background: #43a048b0; }
+.wrong { background: #d32f2fa9; }
+.mark { margin-left: 0.4em; font-weight: 900; }
+
+.clickable { cursor: pointer; padding: 0; }
+@media (hover: hover) { .clickable:hover .cellBtn { filter: brightness(1.2); } }
+.clickable:active .cellBtn { filter: brightness(1.2); }
+.cellBtn {
+  min-height: 2.75rem; touch-action: manipulation;
+  display: block; width: 100%; height: 100%; padding: 0.55rem 0.75rem; margin: 0;
+  border: 2px solid #ff9800; border-radius: 0; background: transparent; color: inherit; font-weight: inherit;
+}
+.cellBtn:focus-visible { outline-offset: -4px; }
+
+.playerHead { display: block; max-width: 8rem; overflow: hidden; text-overflow: ellipsis; margin: 0 auto; }
+.rank { display: block; font-size: 0.7rem; font-weight: 400; color: var(--text-muted); }
+.empty { padding: 1.5rem; text-align: center; color: var(--text-muted); }
+.legend { margin: 0.5rem 0 0; font-size: 0.8rem; color: var(--text-muted); }

@@ -1,0 +1,78 @@
+/*
+ * Seat cards have a fixed natural size (--seat-w) and are scaled by --s (set from JS, see tableLayout.ts).
+ * --hw / --hh: half width / half height of a scaled card; the cards sit on the ellipse inset by these.
+ */
+.table {
+  --seat-w: 10.5rem; --s: 1; --hw: calc(var(--seat-w) / 2 * var(--s)); --hh: 5.4rem;
+  position: relative; height: 100%; min-height: 30rem; width: 100%; max-width: 1100px; margin: 0 auto; overflow: hidden;
+}
+@media (max-width: 599px) {
+  .table { --seat-w: 8.9rem; --val-w: 1.5rem; }
+  .seat { padding-inline: 0.35rem; }
+}
+.felt {
+  position: absolute; inset: calc(var(--hh) * 0.9) calc(var(--hw) * 0.9);
+  border-radius: 50%; background: radial-gradient(ellipse at center, #0d5a43 0%, #093f30 70%, #072d23 100%);
+  border: 6px solid #5b3a1c; box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.center {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; width: max-content; max-width: min(40%, 14rem); white-space: nowrap;
+  display: flex; flex-direction: column; gap: 0.25rem; pointer-events: none;
+}
+.round { font-weight: 900; font-size: clamp(1rem, 2.6vw, 1.7rem); color: var(--cream); }
+.cards { font-size: clamp(0.9rem, 2.2vw, 1.3rem); color: rgba(255, 255, 255, 0.85); }
+.cards strong { font-size: 1.6em; color: #fff; }
+.sum { font-weight: 900; font-size: clamp(0.85rem, 2vw, 1.15rem); padding: 0.15rem 0.6rem; border-radius: var(--radius-pill); align-self: center; background: rgba(0, 0, 0, 0.45); }
+.sumOk { color: var(--green); }
+.sumBad { color: #ff7a7a; }
+
+.seat {
+  position: absolute; width: var(--seat-w); transform: translate(-50%, -50%) scale(var(--s));
+  left: calc(50% + (50% - var(--hw)) * var(--cx));
+  top: calc(50% + (50% - var(--hh)) * var(--cy));
+  background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius-md);
+  padding: 0.45rem 0.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+.giver { border-color: var(--dealer); box-shadow: 0 0 0 2px var(--dealer), 0 4px 14px rgba(0, 0, 0, 0.5); }
+.ok { background: #16311f; }
+.bad { background: #3a1818; }
+.head { display: flex; align-items: center; gap: 0.3rem; max-width: 100%; }
+.name { font-weight: 900; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dealer {
+  flex: none; width: 1.2rem; height: 1.2rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--dealer); color: var(--dealer-ink); font-size: 0.7rem; font-weight: 900;
+}
+.pts { font-size: 0.8rem; color: var(--text-muted); line-height: 1.1; }
+.pts strong { color: var(--text); font-size: 1.55rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.ctl { display: flex; justify-content: center; }
+
+.fallbackWrap { height: 100%; }
+.fallbackNote { margin: 0.5rem 0.75rem 0; font-size: 0.8rem; color: var(--text-muted); text-align: center; }
+
+/* ranking */
+.leader { border-color: var(--brand-gold); box-shadow: 0 0 0 1px var(--brand-gold), 0 0 18px rgba(226, 184, 76, 0.35), 0 4px 14px rgba(0, 0, 0, 0.5); }
+.leader .pts strong { color: #f3d57e; }
+.giver.leader { border-color: var(--dealer); box-shadow: 0 0 0 2px var(--dealer), 0 0 18px rgba(226, 184, 76, 0.35), 0 4px 14px rgba(0, 0, 0, 0.5); }
+.newLeader { z-index: 4; animation: takeover 1.4s cubic-bezier(0.2, 0.7, 0.2, 1); }
+@keyframes takeover {
+  0% { transform: translate(-50%, -50%) scale(var(--s)); }
+  18% { transform: translate(-50%, -50%) scale(calc(var(--s) * 1.14)); box-shadow: 0 0 0 3px var(--brand-gold), 0 0 40px rgba(243, 213, 126, 0.9); }
+  40% { transform: translate(-50%, -50%) scale(calc(var(--s) * 0.98)); }
+  60% { transform: translate(-50%, -50%) scale(calc(var(--s) * 1.05)); box-shadow: 0 0 0 2px var(--brand-gold), 0 0 28px rgba(243, 213, 126, 0.6); }
+  100% { transform: translate(-50%, -50%) scale(var(--s)); }
+}
+.leaderToast {
+  position: absolute; z-index: 6; left: 50%; top: 0.4rem; translate: -50% 0; max-width: calc(100% - 1rem);
+  padding: 0.35rem 0.9rem; border-radius: var(--radius-pill); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: linear-gradient(180deg, #f3d57e, var(--brand-gold-dark)); color: #2b1f00; font-weight: 900; font-size: 0.95rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.rotate {
+  pointer-events: auto; align-self: center; margin-top: 0.15rem; width: 2.5rem; height: 2.5rem; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.35); color: var(--cream);
+  display: grid; place-items: center; font-size: 1.3rem; transition: background-color var(--ease), transform 0.2s ease;
+}
+.rotate:active { transform: rotate(45deg); }
+@media (hover: hover) { .rotate:hover { background: rgba(0, 0, 0, 0.55); } }

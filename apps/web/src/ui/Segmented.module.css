@@ -1,0 +1,18 @@
+.group { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.25rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-pill); }
+.full { display: flex; }
+.full .opt { flex: 1; }
+.opt {
+  touch-action: manipulation; position: relative; isolation: isolate;
+  min-height: 2.5rem; padding: 0.3rem 1rem; border: 0; border-radius: var(--radius-pill);
+  background: transparent; color: var(--text); font-weight: 500; white-space: nowrap;
+  transition: background-color var(--ease), color var(--ease);
+}
+@media (hover: hover) { .opt:hover:not(:disabled):not([aria-pressed="true"]) { background: rgba(255, 255, 255, 0.12); } }
+.opt:active:not(:disabled):not([aria-pressed="true"]) { background: rgba(255, 255, 255, 0.2); }
+.opt[aria-pressed="true"] { color: #1a1200; font-weight: 700; }
+.pill { position: absolute; inset: 0; z-index: -1; border-radius: var(--radius-pill); background: linear-gradient(180deg, var(--brand-gold), var(--brand-gold-dark)); box-shadow: 0 2px 8px rgba(226, 184, 76, 0.25); }
+.label { position: relative; }
+.opt:disabled { opacity: 0.4; cursor: not-allowed; }
+.chips { background: transparent; border: 0; padding: 0; gap: 0.5rem; }
+.chips .opt { border: 1px solid var(--line); min-height: 2.5rem; padding: 0.3rem 0.9rem; }
+.chips .opt[aria-pressed="true"] { border-color: var(--brand-gold); }

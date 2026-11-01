@@ -1,0 +1,66 @@
+# Produktion. Start:  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-scheisse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scheisse}
+      POSTGRES_DB: ${POSTGRES_DB:-scheisse}
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    image: ${IMAGE_REPO:-olafimus/olivers-master-repo}:scheisse-server-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: postgres://${POSTGRES_USER:-scheisse}:${POSTGRES_PASSWORD:-scheisse}@db:5432/${POSTGRES_DB:-scheisse}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+
+  web:
+    image: ${IMAGE_REPO:-olafimus/olivers-master-repo}:scheisse-web-${TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+
+  pgadmin:
+    profiles: ["tools"]
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "127.0.0.1:5050:80"
+    entrypoint: ["/bin/sh", "-c", "cp /pgpass.src /var/lib/pgadmin/pgpass && chmod 600 /var/lib/pgadmin/pgpass && exec /entrypoint.sh"]
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./docker/pgadmin/pgpass:/pgpass.src:ro
+
+volumes:
+  db-data:
+  pgadmin-data:

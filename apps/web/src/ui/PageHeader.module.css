@@ -1,0 +1,15 @@
+.header {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 0.6rem;
+  min-height: 3.25rem;
+  padding: 0.25rem max(0.75rem, env(safe-area-inset-right)) 0.25rem max(0.75rem, env(safe-area-inset-left)); padding-top: max(0.25rem, env(safe-area-inset-top));
+  background: rgba(15, 25, 21, 0.92); backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(226, 184, 76, 0.28);
+}
+.logo { flex: none; display: flex; align-items: center; gap: 0.45rem; min-height: 2.5rem; color: var(--brand-gold); }
+.logo img { height: 2rem; width: auto; display: block; border-radius: 0.5rem; }
+.wordmark { font-family: var(--font-display); font-style: italic; font-weight: 700; font-size: 1.3rem; letter-spacing: 0; line-height: 1; color: var(--brand-gold); }
+@media (hover: hover) { .logo:hover { color: #f3cd6a; } }
+.title { flex: 1; min-width: 0; font-size: clamp(1rem, 4vw, 1.25rem); font-weight: 900; color: var(--cream); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.actions { flex: none; display: flex; align-items: center; gap: 0.25rem; }
+@media (max-width: 420px) { .wordmark { display: none; } }
