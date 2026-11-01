@@ -20,6 +20,7 @@
 .green { --row-bg: linear-gradient(90deg, #39b385, #9be15d); color: #07210f; }
 .teal { --row-bg: var(--teal); }
 .interactive { cursor: pointer; }
-@media (hover: hover) { .interactive:hover { --row-bg: var(--teal-hover); color: #000; } }
-.interactive:active { --row-bg: var(--teal-hover); color: #000; }
+/* hover/press: subtle dark teal, text stays light (bright cyan made light names unreadable) */
+@media (hover: hover) { .interactive:hover { --row-bg: #1f4a47; } }
+.interactive:active { --row-bg: #24564f; }
 .interactive { touch-action: manipulation; min-height: 2.75rem; }

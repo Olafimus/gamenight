@@ -327,7 +327,7 @@ function GameHeader({
           </IconButton>
         )}
         items={[
-          { key: "home", label: "Start", onSelect: () => onNavigate("/") },
+          { key: "home", label: "Start", onSelect: () => onNavigate("/menu") },
           { key: "board", label: "Scoreboard", onSelect: () => onNavigate("/game/scoreboard") },
           { key: "stats", label: "Statistik", onSelect: () => onNavigate("/game/stats") },
           { key: "settings", label: "Einstellungen", onSelect: onSettings },

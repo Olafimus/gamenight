@@ -71,7 +71,7 @@ export function SheetPlayPage() {
             </IconButton>
           )}
           items={[
-            { key: "home", label: "Start", onSelect: () => navigate("/") },
+            { key: "home", label: "Start", onSelect: () => navigate("/menu") },
             { key: "stats", label: "Statistik", onSelect: () => navigate("/game/stats") },
             { key: "settings", label: "Einstellungen", onSelect: () => setSettingsOpen(true) },
             ...(wakeLockSupported()

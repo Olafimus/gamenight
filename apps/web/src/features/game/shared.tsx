@@ -48,7 +48,7 @@ export function useRunningSheet(): { state: SheetMatchState; match: SheetDerived
 export function NoMatch({ title }: { title: string }) {
   return (
     <>
-      <PageHeader title={title} back="/" />
+      <PageHeader title={title} back="/menu" />
       <main style={{ maxWidth: 640, margin: "0 auto", padding: "2rem 1rem" }}>
         <EmptyState
           title="Kein laufendes Spiel"

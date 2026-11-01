@@ -151,7 +151,7 @@ export function SetupPage() {
 
   return (
     <>
-      <PageHeader title="Neues Spiel" back="/" />
+      <PageHeader title="Neues Spiel" back="/menu" />
       <main className={styles.page}>
         <RulesetPicker game={catalog.game(draft.gameId)} rulesets={gameRulesets} ruleset={ruleset} onRuleset={setDraftRuleset} />
         <div className={styles.cols}>

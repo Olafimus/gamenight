@@ -87,7 +87,7 @@ export function CeremonyPage() {
   };
   const home = async () => {
     await flushSync();
-    navigate("/");
+    navigate("/menu");
     useGameStore.getState().archiveMatch();
   };
 

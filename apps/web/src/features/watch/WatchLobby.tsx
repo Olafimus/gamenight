@@ -77,7 +77,7 @@ export function WatchLobby() {
 
   return (
     <>
-      <PageHeader title="Zuschauen" back="/" />
+      <PageHeader title="Zuschauen" back="/menu" />
       <main className={styles.page}>
         <FadeIn y={6}>
           <h2 className={styles.heading}>Finde dein Match</h2>

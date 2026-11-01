@@ -7,7 +7,7 @@ import styles from "./Stats.module.css";
 export function StatsOverview() {
   return (
     <>
-      <PageHeader title="Statistiken" back="/" />
+      <PageHeader title="Statistiken" back="/menu" />
       <main className={styles.page}>
         <nav className={styles.tiles} aria-label="Statistiken">
           <Tile to="/game/stats" title="Aktuelles Match" description="Auswertung des laufenden Spiels" image={cards} contain />

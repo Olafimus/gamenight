@@ -4,7 +4,7 @@ import { PwaStatus } from "./components/PwaStatus";
 import { NotFound } from "./components/NotFound";
 import { authRoutes } from "./features/auth/routes";
 import { gameRoutes } from "./features/game/routes";
-import { Home } from "./features/home/Home";
+import { GameSelect, Home } from "./features/home/Home";
 import { rulesetRoutes } from "./features/rulesets/routes";
 import { statsRoutes } from "./features/stats/routes";
 import { watchRoutes } from "./features/watch/routes";
@@ -27,7 +27,8 @@ export const routes: RouteObject[] = [
   {
     element: <Layout />,
     children: [
-      { index: true, element: <Home /> },
+      { index: true, element: <GameSelect /> },
+      { path: "menu", element: <Home /> },
       ...authRoutes,
       ...gameRoutes,
       ...watchRoutes,

@@ -82,15 +82,15 @@ describe("Leaderboard", () => {
   }
   const names = () => screen.getAllByTestId("lb-name").map((n) => n.querySelector("span")!.textContent);
 
-  it("shows labelled category chips only for categories with data and requests the chosen one", async () => {
+  it("offers only categories with data in the category menu and requests the chosen one", async () => {
     const fetchMock = setup();
     await waitFor(() => expect(screen.getAllByText("Ben").length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: "Kategorie: Gesamt" }));
     for (const label of ["Gesamt", "Kleine Runden (2–3)", "Duell (2 Spieler)", "Dreierrunde"]) {
-      expect(screen.getByRole("button", { name: (n) => n.startsWith(`${label},`) })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: (n) => n.startsWith(label) })).toBeInTheDocument();
     }
-    expect(screen.getByText("Duell")).toBeInTheDocument(); // short label for phones
-    expect(screen.queryByText("Viererrunde")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Dreierrunde/ }));
+    expect(screen.queryByRole("menuitem", { name: /Viererrunde/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Dreierrunde/ }));
     await waitFor(() => expect(fetchMock.mock.calls.some((c) => String((c as unknown[])[0]).includes("category=3"))).toBe(true));
   });
 

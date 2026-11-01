@@ -4,7 +4,7 @@ import { IoInformationCircleOutline } from "react-icons/io5";
 import { useQuery } from "@tanstack/react-query";
 import { STATS_CATEGORIES, STATS_PERIOD_LABELS, STATS_PERIODS, type LeaderboardEntryDto, type LeaderboardResponse, type StatsPeriod } from "@gamenight/shared";
 import { apiGet, errorMessage } from "../../lib/api";
-import { EmptyState, ErrorState, IconButton, PageHeader, Segmented, SkewRow, Spinner, TextInput, cx } from "../../ui";
+import { Dropdown, EmptyState, ErrorState, IconButton, PageHeader, Segmented, SkewRow, Spinner, TextInput, cx } from "../../ui";
 import { useDebounced } from "../watch/useDebounced";
 import { StatsInfoModal } from "./StatsInfoModal";
 import { titleWithGame, useStatsGame, withGame } from "./statsGame";
@@ -190,15 +190,20 @@ export function Leaderboard() {
 
   const available = new Map((data?.categories ?? []).map((c) => [c.id, c.matchCount]));
   const chips = STATS_CATEGORIES.filter((c) => available.has(c.id) || (c.id === category && !data));
-  const groupChips = chips.filter((c) => c.group);
-  const countChips = chips.filter((c) => !c.group);
-  const chip = (c: (typeof STATS_CATEGORIES)[number]) => (
-    <button key={c.id} type="button" className={styles.catChip} aria-pressed={category === c.id} aria-label={`${c.label}, ${available.get(c.id) ?? 0} Matches`} onClick={() => setCategory(c.id)}>
-      <span className={styles.chipFull}>{c.label}</span>
-      <span className={styles.chipShort}>{c.short}</span>
-      <small>{available.get(c.id) ?? ""}</small>
-    </button>
-  );
+  const current = STATS_CATEGORIES.find((c) => c.id === category);
+  // Categories in a menu: group categories first, then the player-count ones after a separator.
+  const categoryItems = [...chips.filter((c) => c.group), ...chips.filter((c) => !c.group)].map((c, i, all) => ({
+    key: c.id,
+    label: (
+      <span className={styles.catItem}>
+        {c.label}
+        <small>{available.get(c.id) ?? ""}</small>
+      </span>
+    ),
+    selected: c.id === category,
+    separatorBefore: i > 0 && !c.group && !!all[i - 1]!.group,
+    onSelect: () => setCategory(c.id),
+  }));
 
   return (
     <>
@@ -213,12 +218,18 @@ export function Leaderboard() {
       />
       <main className={cx(styles.page, styles.pageWide)}>
         <div className={styles.controls}>
-          <div className={styles.catScroll} role="group" aria-label="Kategorie">
-            {groupChips.map(chip)}
-            {countChips.length > 0 && <span className={styles.chipSep} aria-hidden="true" />}
-            {countChips.map(chip)}
-          </div>
           <div className={styles.controlRow}>
+            <Dropdown
+              align="left"
+              trigger={({ triggerProps }) => (
+                <button type="button" className={cx(styles.catChip, styles.catTrigger)} aria-label={`Kategorie: ${current?.label ?? category}`} {...triggerProps}>
+                  <span className={styles.chipFull}>{current?.label ?? "Kategorie"}</span>
+                  <span className={styles.chipShort}>{current?.short ?? "Kategorie"}</span>
+                  <small>{available.get(category) ?? ""}</small> ▾
+                </button>
+              )}
+              items={categoryItems}
+            />
             <Segmented<StatsPeriod>
               className={styles.periodSeg}
               ariaLabel="Zeitraum"

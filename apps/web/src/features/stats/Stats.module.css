@@ -166,3 +166,8 @@
 }
 .table td { white-space: nowrap; }
 .table td:first-child { white-space: normal; }
+
+/* leaderboard category menu */
+.catTrigger { border-color: var(--green); }
+.catItem { display: inline-flex; align-items: baseline; gap: 0.5rem; }
+.catItem small { color: var(--text-muted); font-size: 0.75rem; }
