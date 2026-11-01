@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { previewDice, sheetCategories, type SheetDerivedMatch, type SheetMatchState } from "@gamenight/shared";
+import { motion, useReducedMotion } from "motion/react";
+import { previewDice, scoreDice, sheetCategories, type SheetCategory, type SheetDerivedMatch, type SheetMatchState } from "@gamenight/shared";
 import { Button, Modal, NumberInput, Segmented, cx, useToast } from "../../../ui";
 import { haptic } from "../haptics";
 import { useGameStore } from "../store";
@@ -48,24 +49,44 @@ function useReport() {
   };
 }
 
+/** Categories scored by a pattern (Pasch, Full House, Straße …): "reached" as soon as the dice entered so far form it. */
+const isPattern = (c: SheetCategory) => c.scoring.type === "ofAKind" || c.scoring.type === "groups" || c.scoring.type === "straight";
+
+const optionSpring = { type: "spring", stiffness: 420, damping: 34 } as const;
+
 function RollEntry({ state, playerId, onDone }: { state: SheetMatchState; playerId: string; onDone: () => void }) {
   const dice = state.rules.dice!;
   const report = useReport();
+  const reduce = useReducedMotion();
   const [roll, setRoll] = useState<number[]>([]);
   const complete = roll.length === dice.count;
   const cols = state.rules.columns;
+  // A neutral full roll (not all the same, so no forced joker) tells which categories are still open.
+  const probe = useMemo(() => Array.from({ length: dice.count }, (_, i) => (i % dice.faces) + 1), [dice]);
   const options = useMemo(() => {
-    if (!complete) return [];
-    return cols.flatMap((col, ci) => {
-      const preview = previewDice(state, playerId, ci, roll);
+    const list = cols.flatMap((col, ci) => {
+      const preview = previewDice(state, playerId, ci, complete ? roll : probe);
       return sheetCategories(state.rules)
         .filter((c) => preview[c.id] !== undefined)
-        .map((c) => ({ column: ci, colLabel: cols.length > 1 ? col.label : null, cat: c, points: preview[c.id]! }));
-    })
-      // best first (stable: ties keep sheet order), strikes last
-      .sort((a, b) => b.points - a.points);
-  }, [complete, cols, state, playerId, roll]);
-  const best = options.reduce((m, o) => Math.max(m, o.points), 0);
+        .map((c, order) => {
+          const partial = !complete && roll.length > 0 ? scoreDice(c.scoring, roll) : 0;
+          return {
+            column: ci,
+            colLabel: cols.length > 1 ? col.label : null,
+            cat: c,
+            order,
+            points: complete ? preview[c.id]! : null,
+            reached: complete ? preview[c.id]! > 0 && isPattern(c) : partial > 0 && isPattern(c),
+            partial,
+          };
+        });
+    });
+    // complete: best first (stable: ties keep sheet order), strikes last; while entering: reached patterns first
+    return complete
+      ? list.sort((a, b) => b.points! - a.points!)
+      : list.sort((a, b) => Number(b.reached) - Number(a.reached) || a.column - b.column || a.order - b.order);
+  }, [complete, cols, state, playerId, roll, probe]);
+  const best = options.reduce((m, o) => Math.max(m, o.points ?? 0), 0);
 
   const pick = (column: number, categoryId: string) => {
     if (report(useGameStore.getState().scoreEntry({ playerId, column, categoryId, dice: roll }))) onDone();
@@ -74,28 +95,50 @@ function RollEntry({ state, playerId, onDone }: { state: SheetMatchState; player
   return (
     <div className={styles.body}>
       <DicePicker count={dice.count} faces={dice.faces} value={roll} onChange={setRoll} />
-      {!complete ? (
+      {!complete && (
         <p className={styles.hint}>
-          {roll.length} von {dice.count} Würfeln eingegeben.
+          {roll.length} von {dice.count} Würfeln eingegeben{roll.length === 0 ? " – noch offen:" : "."}
         </p>
-      ) : options.length === 0 ? (
-        <p className={styles.hint}>Kein freies Feld passt – Feld zum Streichen in der Tabelle antippen.</p>
+      )}
+      {options.length === 0 ? (
+        complete && <p className={styles.hint}>Kein freies Feld passt – Feld zum Streichen in der Tabelle antippen.</p>
       ) : (
-        <ul className={styles.options} aria-label="Feld wählen">
+        <ul className={styles.options} aria-label={complete ? "Feld wählen" : "Offene Felder"}>
           {options.map((o) => (
-            <li key={`${o.column}-${o.cat.id}`}>
+            <motion.li key={`${o.column}-${o.cat.id}`} layout={reduce ? false : "position"} transition={optionSpring}>
               <button
                 type="button"
-                className={cx(styles.option, o.points === 0 && styles.optionZero, o.points === best && best > 0 && styles.optionBest)}
+                disabled={!complete}
+                className={cx(
+                  styles.option,
+                  !complete && styles.optionPending,
+                  o.reached && styles.optionReached,
+                  o.points === 0 && styles.optionZero,
+                  o.points === best && best > 0 && styles.optionBest,
+                )}
                 onClick={() => pick(o.column, o.cat.id)}
               >
                 <span className={styles.optLabel}>
                   {o.cat.label}
                   {o.colLabel && <span className={styles.optCol}> · {o.colLabel}</span>}
                 </span>
-                <span className={styles.optPts}>{o.points === 0 ? "streichen" : o.points}</span>
+                {complete ? (
+                  <span className={styles.optPts}>{o.points === 0 ? "streichen" : o.points}</span>
+                ) : o.reached ? (
+                  <motion.span
+                    key="reached"
+                    className={styles.optReached}
+                    initial={reduce ? false : { scale: 0.4, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={optionSpring}
+                  >
+                    ✓ erreicht
+                  </motion.span>
+                ) : (
+                  <span className={styles.optPartial}>{!isPattern(o.cat) && o.partial > 0 ? o.partial : "–"}</span>
+                )}
               </button>
-            </li>
+            </motion.li>
           ))}
         </ul>
       )}

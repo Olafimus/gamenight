@@ -36,6 +36,14 @@
 .optCol { font-weight: 400; color: var(--text-muted); }
 .optPts { font-weight: 900; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
 .optionZero .optPts { font-size: 0.9rem; font-weight: 500; }
+/* while the dice are entered: open fields are shown but not yet selectable; reached patterns move up and light up */
+.option:disabled { cursor: default; }
+.optionPending { padding-block: 0.5rem; }
+.optionPending:hover { border-color: var(--line); }
+.optionReached { border-color: var(--green); background: rgba(37, 211, 102, 0.12); }
+.optionPending.optionReached:hover { border-color: var(--green); }
+.optReached { color: var(--green); font-weight: 900; font-size: 0.9rem; white-space: nowrap; }
+.optPartial { color: var(--text-muted); font-weight: 700; font-variant-numeric: tabular-nums; }
 
 .quick { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.2rem, 1fr)); gap: 0.4rem; }
 .quickBtn {

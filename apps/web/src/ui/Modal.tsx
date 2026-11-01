@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useMediaQuery } from "../lib/useMediaQuery";
@@ -30,6 +30,25 @@ export function Modal({ open, onClose, title, children, footer, wide, dismissibl
   const titleId = useId();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const backdropRef = useRef<HTMLDivElement>(null);
+  // Bumping the key remounts AnimatePresence, which drops a dialog whose exit animation never finished.
+  const [presenceKey, setPresenceKey] = useState(0);
+
+  // A closed dialog must never block the page: while it fades out it ignores input at once, and if the
+  // exit animation hangs (seen on phones) it is removed after a moment. Otherwise an invisible dialog
+  // stays on top, swallows scrolling and turns taps into clicks on its stale buttons.
+  useLayoutEffect(() => {
+    const el = backdropRef.current;
+    if (el) {
+      el.style.pointerEvents = open ? "" : "none";
+      el.inert = !open;
+    }
+    if (open) return;
+    const t = window.setTimeout(() => {
+      if (backdropRef.current?.isConnected) setPresenceKey((k) => k + 1);
+    }, 800);
+    return () => window.clearTimeout(t);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -85,10 +104,11 @@ export function Modal({ open, onClose, title, children, footer, wide, dismissibl
       : { initial: { opacity: 0, scale: 0.94, y: 12 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.97, y: 6 }, transition: springs.snappy };
 
   return createPortal(
-    <AnimatePresence>
+    <AnimatePresence key={presenceKey}>
     {open && (
     <motion.div
       key="modal"
+      ref={backdropRef}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

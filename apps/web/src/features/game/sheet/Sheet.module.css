@@ -18,11 +18,18 @@ thead .rowHead { z-index: 3; color: var(--text-muted); font-weight: 500; font-si
 .playerStart { border-left: 1px solid var(--line); }
 .playerHead { max-width: 8rem; }
 .pname { display: block; overflow: hidden; text-overflow: ellipsis; }
-.turn { display: block; font-size: 0.7rem; font-weight: 700; color: var(--teal-hover); text-transform: uppercase; letter-spacing: 0.04em; }
+.turn {
+  display: inline-block; margin-top: 0.15rem; padding: 0 0.45rem; border-radius: var(--radius-pill);
+  background: #00201c; color: var(--teal-hover); text-shadow: none;
+  font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em;
+}
 .colHead { font-size: 0.75rem; font-weight: 500 !important; }
 .mult { color: var(--yellow); }
-.activeHead { background: #12352f !important; }
-.activeCol { background: rgba(11, 181, 166, 0.09); }
+/* player on turn: solid teal head, tinted column framed in teal */
+.activeHead { background: var(--teal) !important; color: #00201c !important; text-shadow: none !important; }
+.activeCol { background: rgba(11, 181, 166, 0.16); box-shadow: inset 2px 0 0 var(--teal), inset -2px 0 0 var(--teal); }
+.table thead .activeHead { box-shadow: inset 2px 0 0 var(--teal), inset -2px 0 0 var(--teal); }
+.totalRow .activeCol, .table td.activeCol:last-child { box-shadow: inset 2px 0 0 var(--teal), inset -2px 0 0 var(--teal); }
 
 .cell { padding: 0 !important; min-width: 3.4rem; }
 .cellBtn {
@@ -32,8 +39,15 @@ thead .rowHead { z-index: 3; color: var(--text-muted); font-weight: 500; font-si
 }
 .cellBtn:hover { background: rgba(255, 255, 255, 0.06); }
 .cellBtn:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px; }
-.open { color: rgba(255, 255, 255, 0.22); font-weight: 400; font-size: 1.2rem; }
-.activeCol .open { color: var(--teal-hover); }
+/* empty cells: a dashed slot, so missing fields stand out; brighter for the player on turn */
+.slot {
+  display: inline-grid; place-items: center; width: calc(100% - 0.5rem); max-width: 2.6rem; height: 1.9rem;
+  border: 1.5px dashed rgba(255, 255, 255, 0.3); border-radius: 0.45rem;
+  color: rgba(255, 255, 255, 0.5); font-weight: 700; font-size: 1.05rem; line-height: 1;
+}
+.open:hover .slot { border-color: rgba(255, 255, 255, 0.6); color: #fff; }
+.activeCol .slot { border-color: var(--teal-hover); background: rgba(11, 181, 166, 0.18); color: var(--teal-hover); }
+.activeCol .open:hover .slot { background: rgba(11, 181, 166, 0.35); color: #fff; }
 .struck { color: var(--text-muted); }
 .bonusMark { color: var(--yellow); font-size: 0.65em; margin-left: 0.15em; }
 
@@ -58,3 +72,13 @@ thead .rowHead { z-index: 3; color: var(--text-muted); font-weight: 500; font-si
   .short { display: inline; }
   .playerHead { max-width: 4.8rem; }
 }
+
+/* fill: the sheet is the page's only scroller (play page) */
+.fill { flex: 0 1 auto; min-height: 0; }
+
+/* total row stays visible at the bottom while the sheet scrolls */
+.totalRow td, .totalRow th { position: sticky; bottom: 0; z-index: 2; background: var(--surface-2); box-shadow: inset 0 2px 0 var(--line), 0 -4px 10px rgba(0, 0, 0, 0.35); }
+.totalRow th.rowHead { z-index: 3; }
+.totalRow td.gold { background: var(--gold); }
+.totalRow td.silver { background: var(--silver); }
+.totalRow td.bronze { background: var(--bronze); }

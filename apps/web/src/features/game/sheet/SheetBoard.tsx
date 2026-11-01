@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import type { SheetDerivedMatch, SheetDerivedPlayer, SheetMatchState } from "@gamenight/shared";
 import { cx } from "../../../ui";
 import { describeScoring, type CellRef } from "./sheetUtils";
@@ -9,12 +9,14 @@ export interface SheetBoardProps {
   match: SheetDerivedMatch;
   /** Interactive when set: tap on a cell (open or filled). */
   onCell?: (ref: CellRef) => void;
+  /** Fill the parent (a flex column) and be its only scroller. */
+  fill?: boolean;
 }
 
 const MEDAL: Record<number, string> = { 1: styles.gold!, 2: styles.silver!, 3: styles.bronze! };
 
 /** The score sheet: categories as rows, players (× columns) as columns, with section sums, bonuses and totals. */
-export function SheetBoard({ state, match, onCell }: SheetBoardProps) {
+export function SheetBoard({ state, match, onCell, fill }: SheetBoardProps) {
   const { rules } = state;
   const cols = rules.columns;
   const multi = cols.length > 1;
@@ -22,6 +24,17 @@ export function SheetBoard({ state, match, onCell }: SheetBoardProps) {
   const players = match.players;
   const active = match.activePlayerId;
   const isActive = (p: SheetDerivedPlayer) => p.id === active;
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Narrow screens: keep the player on turn in view (scroll the sheet sideways, not the page).
+  useEffect(() => {
+    const box = scrollRef.current;
+    const head = box?.querySelector<HTMLElement>("[data-active-head]");
+    if (!box || !head || box.scrollWidth <= box.clientWidth) return;
+    const sticky = box.querySelector<HTMLElement>("thead th")?.offsetWidth ?? 0;
+    const left = head.offsetLeft - sticky - (box.clientWidth - sticky - head.offsetWidth) / 2;
+    box.scrollTo?.({ left: Math.max(0, left), behavior: "smooth" });
+  }, [active]);
 
   /** One <td> per player × column. */
   const perColumn = (render: (p: SheetDerivedPlayer, ci: number) => React.ReactNode, cls?: string) =>
@@ -34,7 +47,7 @@ export function SheetBoard({ state, match, onCell }: SheetBoardProps) {
     );
 
   return (
-    <div className={styles.scroll}>
+    <div className={cx(styles.scroll, fill && styles.fill)} ref={scrollRef}>
       <table className={styles.table} data-testid="sheet">
         <thead>
           <tr>
@@ -42,7 +55,13 @@ export function SheetBoard({ state, match, onCell }: SheetBoardProps) {
               {state.ruleset.name}
             </th>
             {players.map((p) => (
-              <th key={p.id} colSpan={span} className={cx(styles.playerHead, isActive(p) && styles.activeHead, styles.playerStart)} scope="colgroup">
+              <th
+                key={p.id}
+                colSpan={span}
+                className={cx(styles.playerHead, isActive(p) && styles.activeHead, styles.playerStart)}
+                scope="colgroup"
+                data-active-head={isActive(p) || undefined}
+              >
                 <span className={styles.pname}>{p.name}</span>
                 {isActive(p) && <span className={styles.turn}>am Zug</span>}
               </th>
@@ -88,7 +107,11 @@ export function SheetBoard({ state, match, onCell }: SheetBoardProps) {
                         data-testid={`cell-${p.id}-${ci}-${cat.id}`}
                         onClick={() => onCell({ playerId: p.id, column: ci, categoryId: cat.id })}
                       >
-                        {cell ? content : <span aria-hidden="true">+</span>}
+                        {cell ? content : (
+                          <span className={styles.slot} aria-hidden="true">
+                            +
+                          </span>
+                        )}
                       </button>
                     );
                   }, styles.cell)}

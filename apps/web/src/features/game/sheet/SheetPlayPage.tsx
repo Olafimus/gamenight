@@ -84,7 +84,7 @@ export function SheetPlayPage() {
       </header>
 
       <main className={cx(play.main, styles.main)} aria-label="Punkteblock">
-        <SheetBoard state={state} match={match} onCell={(ref) => setTarget({ kind: "cell", ref })} />
+        <SheetBoard fill state={state} match={match} onCell={(ref) => setTarget({ kind: "cell", ref })} />
         <p className={styles.tip}>
           {hasDice ? "Wurf eintragen und Feld wählen – oder ein Feld direkt antippen (auch zum Streichen oder Korrigieren)." : "Feld antippen, um Punkte einzutragen oder zu korrigieren."}
         </p>

@@ -151,6 +151,20 @@ describe("setup: game chosen on the start page", () => {
 });
 
 describe("play pages of other games", () => {
+  it("Kniffel roll entry lists the open fields from the start and moves reached patterns up", () => {
+    s().setDraftGame("kniffel");
+    addPlayers(["Anna", "Ben"]);
+    s().startMatch();
+    wrap(<SheetPlayPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Wurf von Anna" }));
+    const open = () => within(screen.getByRole("list", { name: "Offene Felder" })).getAllByRole("button");
+    expect(open()).toHaveLength(sheetCategories(KNIFFEL_RULES).length);
+    expect(open().every((b) => (b as HTMLButtonElement).disabled)).toBe(true);
+    for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole("button", { name: "6 hinzufügen" }));
+    expect(open()[0]).toHaveTextContent(/Dreierpasch.*erreicht/);
+    expect(screen.getAllByText("✓ erreicht")).toHaveLength(1);
+  });
+
   it("Wizard compact view offers tricks steppers instead of ✓/✗", () => {
     s().setDraftGame("wizard");
     addPlayers(["Anna", "Ben", "Cleo"]);
