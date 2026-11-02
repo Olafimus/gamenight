@@ -121,8 +121,8 @@
 .place { font-weight: 800; white-space: nowrap; }
 
 /* matches */
-.split { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: start; }
-@media (min-width: 900px) { .split { grid-template-columns: 1fr 1fr; } .preview { position: sticky; top: 5rem; } }
+.split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+@media (min-width: 900px) { .split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .preview { position: sticky; top: 5rem; } }
 .preview { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 1rem; }
 .guestBadge { display: inline-block; margin-left: 0.4rem; padding: 0 0.45rem; border-radius: var(--radius-pill); border: 1px solid var(--line); color: var(--text-muted); font-size: 0.68rem; font-weight: 600; vertical-align: middle; }
 .notice { background: var(--surface); border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
@@ -179,3 +179,6 @@
 .catTrigger { border-color: var(--green); }
 .catItem { display: inline-flex; align-items: baseline; gap: 0.5rem; }
 .catItem small { color: var(--text-muted); font-size: 0.75rem; }
+
+/* matches: the whole page scrolls (no inner scroll container), so no fixed height */
+@media (min-width: 768px) and (min-height: 700px) { .pageWide.pageFlow { height: auto; overflow: visible; padding-bottom: 1.2rem; } }

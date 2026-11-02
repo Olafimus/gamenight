@@ -73,7 +73,7 @@ export function MatchesStats() {
   return (
     <>
       <PageHeader title="Matches" back="/stats" />
-      <main className={cx(styles.page, styles.pageWide)}>
+      <main className={cx(styles.page, styles.pageWide, styles.pageFlow)}>
         <TextInput label="Match suchen" hideLabel placeholder="Code oder Spieler suchen …" value={search} onChange={(e) => setSearch(e.target.value)} />
         <div className={styles.split}>
           <div>
