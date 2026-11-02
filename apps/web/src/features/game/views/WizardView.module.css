@@ -34,6 +34,7 @@
 .chipName { display: inline-flex; align-items: center; gap: 0.2rem; font-size: 0.8rem; font-weight: 700; max-width: 7.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chipRank { transform: scale(0.8); margin-left: -0.15rem; }
 .chipBid { font-size: 0.95rem; font-weight: 900; color: var(--text-muted); }
+.chipPts { margin-left: 0.4em; font-size: 0.7rem; font-weight: 700; color: var(--text-muted); }
 .chipDone .chipBid { color: var(--cream); }
 .chipOn { border-color: var(--cyan); background: #0a3a52; }
 

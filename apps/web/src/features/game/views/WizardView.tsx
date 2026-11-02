@@ -2,21 +2,20 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import { canUndoRound, rankTotals, roundPoints, type TrickDerivedPlayer as DerivedPlayer } from "@gamenight/shared";
-import { Scoreboard } from "../../../components/Scoreboard";
 import { useMediaQuery } from "../../../lib/useMediaQuery";
-import { Segmented, cx } from "../../../ui";
+import { cx } from "../../../ui";
 import { AnimatedNumber } from "./AnimatedNumber";
 import { ResultControl, currentHit } from "./controls";
 import { RankBadge } from "./RankBadge";
+import { SplitSide } from "./SplitView";
 import type { ViewProps } from "./types";
 import styles from "./WizardView.module.css";
 
-type Phase = "bid" | "result" | "summary";
+type Phase = "bid" | "result";
 
 const PHASES: Array<{ id: Phase; label: string }> = [
   { id: "bid", label: "Ansagen" },
-  { id: "result", label: "Ergebnis" },
-  { id: "summary", label: "Zusammenfassung" },
+  { id: "result", label: "Ergebnis & Speichern" },
 ];
 
 /** Players in bidding order: the first bidder (giver or the seat after, see rules), then the following seats, wrapping around. */
@@ -55,106 +54,26 @@ function Slide({ children, dir }: { children: ReactNode; dir: number }) {
   );
 }
 
-/** Tablet and wider: the round table sits next to the assistant. */
+/** Tablet and wider: the scoreboard (as in the split view) sits next to the assistant. */
 export const WIZARD_SIDE_QUERY = "(min-width: 768px)";
 
 /**
  * The assistant resets (via key) after every committed / undone round so a new round always starts at phase 1.
- * On wider screens a table of the round (current bidder highlighted) is shown beside it.
+ * On wider screens the scoreboard / standings / chart panel of the split view is shown beside it.
  */
 export function WizardView(props: ViewProps) {
   const wide = useMediaQuery(WIZARD_SIDE_QUERY);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const wizard = <Wizard key={props.match.roundsPlayed} {...props} onActive={setActiveId} />;
+  const wizard = <Wizard key={props.match.roundsPlayed} {...props} />;
   if (!wide) return wizard;
   return (
     <div className={styles.layout}>
       {wizard}
-      <WizardSide {...props} activeId={activeId} />
+      <SplitSide match={props.match} initial="board" />
     </div>
   );
 }
 
-type Side = "table" | "board";
-
-/** Round table in bidding order: bid, result and total per player; the player bidding now is highlighted. */
-function WizardSide({ state, match, activeId }: ViewProps & { activeId: string | null }) {
-  const [panel, setPanel] = useState<Side>("table");
-  const order = biddingOrder(match.players, match.bidderId);
-  const tricksMode = state.rules.entry === "tricks";
-  const resultOf = (id: string) => {
-    if (tricksMode) {
-      const t = state.current.tricks?.[id];
-      return t === undefined ? "" : String(t);
-    }
-    const c = state.current.correct[id];
-    return c === undefined ? "" : c ? "✓" : "✗";
-  };
-  return (
-    <aside className={styles.side} aria-label="Tabelle">
-      <Segmented
-        ariaLabel="Anzeige"
-        full
-        value={panel}
-        onChange={setPanel}
-        options={[
-          { value: "table", label: "Runde" },
-          { value: "board", label: "Scoreboard" },
-        ]}
-      />
-      {panel === "table" ? (
-        <table className={styles.sideTable}>
-          <thead>
-            <tr>
-              <th scope="col">Platz</th>
-              <th scope="col">Name</th>
-              <th scope="col" className={styles.sideNum}>Ansage</th>
-              <th scope="col" className={styles.sideNum}>{tricksMode ? "Stiche" : "Erg."}</th>
-              <th scope="col" className={styles.sideNum}>Punkte</th>
-            </tr>
-          </thead>
-          <tbody>
-            {order.map((p) => {
-              const bid = state.current.bids[p.id];
-              const active = p.id === activeId;
-              return (
-                <tr key={p.id} className={cx(active && styles.sideActive)} aria-current={active ? "true" : undefined}>
-                  <td>{p.placement ?? "–"}</td>
-                  <td className={styles.sideName}>
-                    {p.name}
-                    {p.id === match.giverId && (
-                      <span className={styles.sideGiver} title="Geber">
-                        G
-                      </span>
-                    )}
-                  </td>
-                  <td className={styles.sideNum}>{bid ?? "–"}</td>
-                  <td className={styles.sideNum}>{resultOf(p.id)}</td>
-                  <td className={styles.sideNum}>
-                    <strong>{p.total}</strong>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={2}>Summe Ansagen</td>
-              <td className={cx(styles.sideNum, match.sumMatchesCards ? styles.sumEq : styles.sideSumBad)}>
-                {match.calledSum}/{match.cardsThisRound}
-              </td>
-              <td colSpan={2} />
-            </tr>
-          </tfoot>
-        </table>
-      ) : (
-        <Scoreboard match={match} />
-      )}
-    </aside>
-  );
-}
-
-function Wizard({ state, match, players: _sorted, actions, onActive }: ViewProps & { onActive: (id: string | null) => void }) {
+function Wizard({ state, match, players: _sorted, actions }: ViewProps) {
   const navigate = useNavigate();
   const order = useMemo(() => biddingOrder(match.players, match.bidderId), [match.players, match.bidderId]);
   const n = order.length;
@@ -162,7 +81,7 @@ function Wizard({ state, match, players: _sorted, actions, onActive }: ViewProps
   const anyMarked = order.some((p) => currentHit(state, p.id) !== undefined);
 
   const [phase, setPhase] = useState<Phase>(() =>
-    match.allMarked ? "summary" : anyMarked || order.every((p) => hasBid(p.id)) ? "result" : "bid",
+    anyMarked || order.every((p) => hasBid(p.id)) ? "result" : "bid",
   );
   const [idx, setIdx] = useState(() => {
     const first = order.findIndex((p) => !hasBid(p.id));
@@ -172,11 +91,6 @@ function Wizard({ state, match, players: _sorted, actions, onActive }: ViewProps
   const reduce = useReducedMotion();
   // Result phase: once everybody is marked, show the new totals/placements (after a short beat).
   const reveal = useDelayedFlag(phase === "result" && match.allMarked, reduce ? 0 : 350);
-  // Summary phase: start in the old order, then move the lines to their new placement.
-  const resort = useDelayedFlag(phase === "summary", reduce ? 0 : 500);
-
-  const activeId = !match.finished && phase === "bid" ? ((order[idx] ?? order[0])?.id ?? null) : null;
-  useEffect(() => onActive(activeId), [activeId, onActive]);
 
   if (match.finished) {
     return (
@@ -225,8 +139,6 @@ function Wizard({ state, match, players: _sorted, actions, onActive }: ViewProps
   });
   const places = rankTotals(projected.map((x) => x.total), state.rules.winner);
   const projectedOf = new Map(projected.map((x, i) => [x.p.id, { ...x, place: places[i]! }]));
-  const byOld = [...projected].sort((a, b) => (a.p.placement ?? 0) - (b.p.placement ?? 0));
-  const summaryLines = resort ? [...byOld].sort((a, b) => projectedOf.get(a.p.id)!.place - projectedOf.get(b.p.id)!.place) : byOld;
 
   return (
     <div className={styles.wiz}>
@@ -255,7 +167,10 @@ function Wizard({ state, match, players: _sorted, actions, onActive }: ViewProps
                     <RankBadge placement={p.placement} className={styles.chipRank} />
                     {p.name}
                   </span>
-                  <span className={styles.chipBid}>{hasBid(p.id) ? bidOf(p.id) : "–"}</span>
+                  <span className={styles.chipBid}>
+                    {hasBid(p.id) ? bidOf(p.id) : "–"}
+                    <span className={styles.chipPts}>{p.total} Pkt</span>
+                  </span>
                 </button>
               ))}
             </div>
@@ -367,50 +282,7 @@ function Wizard({ state, match, players: _sorted, actions, onActive }: ViewProps
             <button type="button" className={cx(styles.btn, styles.back)} onClick={() => { setIdx(n - 1); setPhase("bid"); }}>
               ‹ Ansagen
             </button>
-            <button type="button" className={cx(styles.btn, styles.next)} disabled={!match.allMarked} onClick={() => setPhase("summary")}>
-              Zusammenfassung ›
-            </button>
-          </div>
-        </Slide>
-      )}
-
-      {phase === "summary" && (
-        <Slide key="summary" dir={1}>
-          <div className={styles.body}>
-            <ul className={styles.list} aria-label="Zusammenfassung">
-              {summaryLines.map(({ p, ok, delta, total }) => (
-                <motion.li
-                  key={p.id}
-                  layout={reduce ? false : "position"}
-                  transition={lineSpring}
-                  className={cx(styles.line, ok ? styles.lineOk : styles.lineBad)}
-                >
-                  <span className={styles.lnameRow}>
-                    <RankBadge placement={resort ? projectedOf.get(p.id)!.place : p.placement} />
-                    <span className={styles.lname}>{p.name}</span>
-                  </span>
-                  <span className={styles.lbid}>
-                    {bidOf(p.id)} {ok ? "✓" : tricksMode ? `✗ (${state.current.tricks?.[p.id] ?? 0})` : "✗"}
-                  </span>
-                  <strong className={cx(styles.delta, delta >= 0 ? styles.up : styles.down)} data-testid={`delta-${p.id}`}>
-                    {delta >= 0 ? "+" : "−"}
-                    {Math.abs(delta)}
-                  </strong>
-                  <span className={styles.newTotal}>
-                    <b>
-                      <AnimatedNumber value={resort ? total : p.total} />
-                    </b>{" "}
-                    Pkt
-                  </span>
-                </motion.li>
-              ))}
-            </ul>
-          </div>
-          <div className={styles.foot}>
-            <button type="button" className={cx(styles.btn, styles.back)} onClick={() => setPhase("result")}>
-              ‹ Zurück
-            </button>
-            <button type="button" className={cx(styles.btn, styles.next)} onClick={actions.commit}>
+            <button type="button" className={cx(styles.btn, styles.next)} disabled={!match.allMarked} onClick={actions.commit}>
               Runde speichern
             </button>
           </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { MatchDtoOf, TrickMatchState } from "@gamenight/shared";
+import { roundPoints, type MatchDtoOf, type TrickMatchState } from "@gamenight/shared";
 
 type MatchDto = MatchDtoOf<TrickMatchState>;
 import { AnimatePresence, cx, motion, useReducedMotion } from "../../ui";
@@ -63,7 +63,7 @@ export function LiveRoundCard({ match, roundsPlayed }: { match: MatchDto; rounds
       </header>
       <ol className={styles.rows}>
         {lr.rows.map((r) => (
-          <li key={r.id} className={cx(styles.row, r.correct === true && styles.ok, r.correct === false && styles.bad)}>
+          <li key={r.id} className={styles.row}>
             <span className={styles.name}>
               {r.name}
               {r.isGiver && <span className={styles.giver}>G</span>}
@@ -81,15 +81,21 @@ export function LiveRoundCard({ match, roundsPlayed }: { match: MatchDto; rounds
                 {r.bid ?? "–"}
               </motion.span>
             </AnimatePresence>
-            <span className={styles.mark} aria-label={r.correct === null ? undefined : r.correct ? "richtig" : "falsch"}>
-              {r.correct === null ? "" : r.correct ? "✓" : "✗"}
-            </span>
-            {r.points !== null && (
-              <span className={cx(styles.points, r.points < 0 && styles.neg)}>
-                {r.points >= 0 ? "+" : "−"}
-                {Math.abs(r.points)}
-              </span>
-            )}
+            {(() => {
+              const points =
+                r.points ??
+                (r.correct !== null && r.bid !== null
+                  ? roundPoints(r.bid, r.correct, match.state.rules.scoring, match.state.rules.entry === "tricks" ? (match.state.current.tricks?.[r.id] ?? 0) : null)
+                  : null);
+              return (
+                <span
+                  className={cx(styles.points, points !== null && points < 0 && styles.neg)}
+                  aria-label={r.correct === null ? undefined : `${r.correct ? "richtig" : "falsch"}, ${points} Punkte`}
+                >
+                  {points === null ? "" : `${points >= 0 ? "+" : "−"}${Math.abs(points)}`}
+                </span>
+              );
+            })()}
           </li>
         ))}
       </ol>

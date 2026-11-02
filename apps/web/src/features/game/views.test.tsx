@@ -98,7 +98,7 @@ describe("wizard", () => {
     expect(biddingOrder(m2.players, m2.giverId).map((p) => p.name)).toEqual(["Cleo", "Dora", "Anna", "Ben"]);
   });
 
-  it("runs bids, result, summary and commits only on 'Runde speichern'", () => {
+  it("runs bids, then result with deltas and commits on 'Runde speichern'", async () => {
     begin(["Anna", "Ben", "Cleo"]);
     s().setView("wizard");
     wrap(<PlayPage />);
@@ -116,10 +116,9 @@ describe("wizard", () => {
     fireEvent.click(screen.getByRole("button", { name: "alle ✓" }));
     fireEvent.click(screen.getByRole("button", { name: "Anna: falsch" }));
     expect(t().rounds).toHaveLength(0);
-    fireEvent.click(screen.getByRole("button", { name: "Zusammenfassung ›" }));
-    // summary with per-player deltas, nothing committed yet
-    const list = screen.getByRole("list", { name: "Zusammenfassung" });
-    const deltas = within(list).getAllByText(/^[+−]\d+$/).map((e) => e.textContent);
+    // per-player deltas are shown in the result phase, nothing committed yet
+    const list = screen.getByRole("list", { name: "Ergebnis" });
+    const deltas = (await within(list).findAllByText(/^[+−]\d+$/)).map((e) => e.textContent);
     expect(deltas).toEqual(["−10", "+10", "+11"]); // Anna, Ben, Cleo
     expect(t().rounds).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Runde speichern" }));

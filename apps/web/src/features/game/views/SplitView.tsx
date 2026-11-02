@@ -12,17 +12,24 @@ type Panel = "standings" | "board" | "chart";
 
 /** Left: input rows. Right: live standings, full scoreboard or points chart. */
 export function SplitView(props: ViewProps) {
-  const { match } = props;
-  const reduce = useReducedMotion();
-  const [panel, setPanel] = useState<Panel>("standings");
-  const ranked = [...match.players].sort((a, b) => b.total - a.total || a.seat - b.seat);
-  const last = match.roundsPlayed - 1;
-
   return (
     <div className={styles.split}>
       <div className={styles.input}>
         <CompactView {...props} embedded />
       </div>
+      <SplitSide match={props.match} />
+    </div>
+  );
+}
+
+/** Right-hand panel: standings, full scoreboard or points chart. Also used beside the wizard. */
+export function SplitSide({ match, initial = "standings" }: { match: ViewProps["match"]; initial?: Panel }) {
+  const reduce = useReducedMotion();
+  const [panel, setPanel] = useState<Panel>(initial);
+  const ranked = [...match.players].sort((a, b) => b.total - a.total || a.seat - b.seat);
+  const last = match.roundsPlayed - 1;
+
+  return (
       <aside className={styles.side} aria-label="Zwischenstand">
         <Segmented
           ariaLabel="Anzeige"
@@ -64,6 +71,5 @@ export function SplitView(props: ViewProps) {
           {panel === "chart" && <ProgressChart players={match.players} rounds={match.roundsPlayed} />}
         </div>
       </aside>
-    </div>
   );
 }
